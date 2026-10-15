@@ -787,3 +787,8 @@ h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.
 .modal-rows dd { margin: 0; }
 .modal-note { font-size: 13px; color: var(--t2); margin: 0 0 16px; }
 .btn-close { width: 100%; padding: 11px; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); font: inherit; font-weight: 600; cursor: pointer; }
+.modal-card h4 { margin: 18px 0 6px; font-size: 14px; font-weight: 600; }
+.modal-card p { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--t2); }
+.modal-list { margin: 0 0 8px; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--t2); }
+.modal-list li { margin-bottom: 4px; }
+.modal-card .btn-close { margin-top: 18px; position: sticky; bottom: 0; }

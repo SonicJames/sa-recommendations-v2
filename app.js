@@ -880,8 +880,6 @@
   function bundleHtml(b) {
     const on = state.bundlesOn.has(b.id);
     const sel = b.jobs.filter(j => state.selected.has(j.id)).length;
-    const g = groupsFor(b.jobs);
-    const mix = [g.ready.length ? `${g.ready.length} 1-click` : "", g.quick.length ? `${g.quick.length} quick` : "", g.long.length ? `${g.long.length} longer` : ""].filter(Boolean).join(" · ");
     const capped = atCap();
     return `<section class="bundle${on ? " on" : ""}${b.id === "exact" ? " exact" : ""}" data-bundle="${b.id}">
       <div class="bundle-h" data-bundle-toggle="${b.id}">
@@ -889,9 +887,9 @@
         <div class="bundle-t"><div class="bundle-title">${esc(b.name)}${b.id === "exact" ? '<span class="tag pick">Top pick</span>' : ""}</div>
           <div class="bundle-count">${b.jobs.length} ${plural(b.jobs.length, "role")}${on ? `, ${sel} selected` : ""}</div></div>
         ${on ? "" : `<span class="bundle-n">${I.plus} Add</span>`}
-        <div class="bundle-why">${esc(b.why)}${b.changes.length ? " · " : ""}${b.changes.map(c => `<span class="chg">${esc(c)}</span>`).join(" ")} <span class="mix">· ${b.jobs.length === 1 ? qText(b.jobs[0]) : mix}</span></div>
+        <div class="bundle-why">${esc(b.why)}${b.changes.length ? " · " : ""}${b.changes.map(c => `<span class="chg">${esc(c)}</span>`).join(" ")}</div>
       </div>
-      ${on ? `<div class="bundle-jobs">${b.jobs.map(j => { const s = state.selected.has(j.id); return jobRow(j, s, b.jobs.length > 1, !s && capped && tierOf(j) !== "long" ? "Tomorrow" : ""); }).join("")}</div>` : ""}
+      ${on ? `<div class="bundle-jobs">${b.jobs.map(j => { const s = state.selected.has(j.id); return jobRow(j, s, true, !s && capped && tierOf(j) !== "long" ? "Tomorrow" : ""); }).join("")}</div>` : ""}
     </section>`;
   }
 
@@ -1269,12 +1267,47 @@
   function openDetails(id, trigger) {
     const j = D.jobs.find(x => x.id === id); if (!j) return;
     closeDetails(); detailsReturn = trigger || null;
-    const rows = [["Location", placeText(j)], ["Practice", practiceText(j)], ["Hours", j.shift], ["Pay", j.pay], ["Posted", j.postedDays === 0 ? "Today" : `${j.postedDays} ${plural(j.postedDays, "day")} ago`]].filter(r => r[1]);
+    const rows = [["Location", placeText(j)], ["Practice", practiceText(j)], ["Hours", j.shift], ["Pay", j.pay], ["Posted", j.postedDays === 0 ? "Today" : `${j.postedDays} ${plural(j.postedDays, "day")} ago`], ["Application", qText(j)]].filter(r => r[1]);
+    const lead = /Lead|Director/.test(j.title), senior = /Senior/.test(j.title), assoc = /Associate/.test(j.title);
+    const part = j.shift !== FT;
+    const who = j.practice === "private" ? "a locally owned private practice" : "a group practice with shared support teams";
+    const todo = [
+      "Provide comprehensive exams, diagnosis and treatment planning for a general adult and family patient base",
+      "Perform restorative, preventive and routine procedures, including crowns, fillings, extractions and root canals where trained",
+      "Work chairside with a dedicated assistant and a hygiene team, with digital imaging and intraoral scanners on site",
+      senior ? "Mentor newer clinicians and help set clinical standards across the office" : assoc ? "Build your own patient list with a steady flow of new and existing patients from day one" : "Keep clear, compliant records and talk patients through their options in plain language",
+      lead ? "Lead the clinical team: rota, quality review, onboarding of new dentists and day-to-day escalations" : "Join morning huddles and help the office hit its monthly care goals",
+    ];
+    const need = [
+      "DDS or DMD from an accredited school",
+      `Active ${j.state} dental license in good standing, or eligible to obtain one before your start date`,
+      "Current DEA registration and CPR certification",
+      senior || lead ? "Five or more years of clinical experience in general dentistry" : "Recent graduates and experienced dentists both welcome",
+      "A calm, patient-first approach and comfort working as part of a close team",
+    ];
+    const perks = [
+      j.pay ? `Pay: ${j.pay}, paid as a share of collections with a guaranteed daily minimum` : "Competitive pay",
+      "Medical, dental and vision cover from the first of the month after you start",
+      "401(k) with employer match and paid malpractice insurance",
+      "Paid time off, plus an annual CE allowance and paid course days",
+      part ? "Flexible scheduling: you choose your days within the practice's opening hours" : "Four-day clinical week available after your first 90 days",
+      "Sign-on and relocation support" + (j.area === "us" ? " for moves from out of state" : " for qualifying candidates"),
+    ];
+    const list = a => `<ul class="modal-list">${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
     const m = document.createElement("div");
     m.id = "job-details"; m.className = "modal"; m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true"); m.setAttribute("aria-labelledby", "jd-title");
     m.innerHTML = `<div class="modal-card"><div class="modal-h"><div class="mono">${esc(mono(j.company))}</div><div><h3 id="jd-title">${esc(j.title)}</h3><div class="jm">${esc(j.company)}</div></div></div>
       <dl class="modal-rows">${rows.map(r => `<dt>${r[0]}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>
       ${j.early ? '<p class="modal-note">Early applicant: this role was posted recently, so applying now puts you near the front.</p>' : ""}
+      <h4>About the role</h4>
+      <p>${esc(j.company)} is hiring a ${esc(j.title.toLowerCase())} for its ${esc(j.city)} office. This is a ${part ? esc(j.shift.toLowerCase()) : "full-time"}, on-site position at ${who}. You will see a steady schedule of patients, with the time and equipment to practise the way you were trained.</p>
+      <h4>What you'll do</h4>${list(todo)}
+      <h4>What we're looking for</h4>${list(need)}
+      <h4>Pay and benefits</h4>${list(perks)}
+      <h4>About the practice</h4>
+      <p>${j.practice === "private" ? `${esc(j.company)} is a privately owned practice in ${esc(j.city)}. Decisions about equipment, scheduling and care are made in the office, by the people who work there.` : `${esc(j.company)} is part of a group of practices that share purchasing, administration and clinical support, so dentists spend their time on patients rather than paperwork.`} The team has been serving ${esc(j.city)} families for years and many of its dentists have been with the office for five years or more.</p>
+      <h4>Interview process</h4>
+      <p>A short phone call, then a visit to the office to meet the team and see the operatories. Most offers are made within a week of the visit.</p>
       <button type="button" class="btn-close" id="jd-close">Close</button></div>`;
     m.addEventListener("click", e => { if (e.target === m) closeDetails(); });
     document.body.appendChild(m);
