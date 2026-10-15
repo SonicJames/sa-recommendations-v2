@@ -405,9 +405,10 @@
     const first = $("#otp input"); if (first) first.focus();
   }
   function changeEmail() {
-    if (state.formActive || state.unlocked) { toast("Restart the prototype to use a different email"); return; }
-    state.identity = null; state.lookup = null; state.email = null;
-    renderStep1();
+    if (state.processing) return;
+    clearInterval(state.resendTick);
+    Object.assign(state, { identity: null, lookup: null, email: null, unlocked: false, verified: false, resumeConfirmed: false, formActive: false, filled: false, resume: null, resumeRow: null, startRow: null, otpMode: "send", answers: {}, a: { backup: null, locpref: null, relocate: null } });
+    renderStep1(); renderCta1();
     agent("Sure, which email should I use?", { think: 250, status: "Start with your email" });
   }
 
@@ -931,9 +932,9 @@
     const meta = sel.length === 0 ? "Add an option or select a role to continue" : `<b>${sel.length}</b> selected${atCap() ? " · today's max" : ""} · ${qs.length ? `${qs.length} extra ${plural(qs.length, "question")} · about ${mins} min` : "no extra questions"}`;
     if (state.step2Ready) setStatus(sel.length ? `${sel.length} selected · ${nOpt} ${plural(nOpt, "option")}${atCap() ? " · today's max" : ""}` : "Add an option to continue");
     setCta(`<div class="cta-in"><div class="cta-meta"><span>${meta}</span></div>
-      <div class="cta-actions"><button class="btn btn-ghost" type="button" id="done-early">I'm done for today</button><button class="btn btn-primary" type="button" id="continue2"${sel.length === 0 ? " disabled" : ""}>${sel.length ? `Continue with ${sel.length} ${plural(sel.length, "job")}` : "Continue"} ${I.arrow}</button></div></div>`);
+      <div class="cta-actions"><button class="btn btn-ghost" type="button" id="done-early">Search for other roles</button><button class="btn btn-primary" type="button" id="continue2"${sel.length === 0 ? " disabled" : ""}>${sel.length ? `Continue with ${sel.length} ${plural(sel.length, "job")}` : "Continue"} ${I.arrow}</button></div></div>`);
     $("#continue2").addEventListener("click", goStep3);
-    $("#done-early").addEventListener("click", finishEarly);
+    $("#done-early").addEventListener("click", () => toast("Search for other roles (prototype)"));
   }
   async function runStep2Chat() {
     await agent("Sent. West Alamo usually replies by email within a week.", { think: 450, status: "Sent to West Alamo" });
