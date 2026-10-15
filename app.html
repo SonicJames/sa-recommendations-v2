@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SonicApply · General Dentist, West Alamo Dental Care</title>
+  <meta name="description" content="SonicApply redesign prototype: apply once, add more jobs from live inventory, confirm and send.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="assets/linkedin-bug.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="li-page" id="li-page">
+    <!-- Desktop: the real LinkedIn job post, with a hotspot over Apply -->
+
+    <!-- Phone: the same job as the LinkedIn app shows it. Apply opens SonicApply full screen, the way an in-app browser would. -->
+    <div class="li-m" id="li-m" aria-label="LinkedIn job post, as shown in the LinkedIn app">
+      <div class="li-m-nav">
+        <button type="button" class="li-m-ic" aria-label="Back" data-toast="Back to search (prototype)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div class="li-m-nav-r">
+          <button type="button" class="li-m-ic" aria-label="Share" data-toast="Share (prototype)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
+          <button type="button" class="li-m-ic" aria-label="More" data-toast="More (prototype)"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+      </div>
+      <div class="li-m-scroll" id="li-m-scroll">
+        <section class="li-m-head">
+          <div class="li-m-co"><span class="li-m-logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2c-1.9 0-2.7 1-4.1 1S5.6 3 4.1 4.6c-1.9 2-.9 5.6.2 8 1 2.4 1.5 6.3 2.9 7.7.9.9 1.7-.3 2.1-2.3.5-2.4 1.5-2.6 2.7-2.6s2.2.2 2.7 2.6c.4 2 1.2 3.2 2.1 2.3 1.4-1.4 1.9-5.3 2.9-7.7 1.1-2.4 2.1-6 .2-8-1.5-1.6-2.4-.4-3.8-.4s-2.2-1-4.1-1z"/></svg></span><span class="li-m-co-name">Heartland Dental</span></div>
+          <h1 class="li-m-title">General Dentist- San Antonio, TX</h1>
+          <p class="li-m-meta">San Antonio, TX · <b class="li-m-green">16 hours ago</b> · 0 people clicked apply</p>
+          <p class="li-m-meta li-m-meta2">Responses managed off LinkedIn</p>
+          <div class="li-m-pills" aria-label="Job details"><span>On-site</span><span>Full-time</span><span>Clinic / Private Practice</span></div>
+          <div class="li-m-actions" id="li-m-actions">
+            <button type="button" class="li-m-apply pulse" id="start-m" data-start>Apply <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button>
+            <button type="button" class="li-m-save" data-toast="Saved (prototype)">Save</button>
+          </div>
+        </section>
+        <section class="li-m-card">
+          <div class="li-m-prem"><span class="li-m-prem-sq" aria-hidden="true"></span>Premium</div>
+          <h2>Job match summary not available</h2>
+          <p>This job post doesn't have enough information to generate a match summary.</p>
+        </section>
+        <section class="li-m-about">
+          <h2>About the job</h2>
+          <p>West Alamo Dental Care, supported by Heartland Dental, is looking for a General Dentist to join our team in San Antonio, TX. You'll step into a full schedule from day one in a modern, digital practice with an experienced support team behind you.</p>
+          <p>You'll provide comprehensive care for patients of all ages, plan treatment with the autonomy to practise the way you were trained, and mentor a team that takes pride in its work. Clinical and leadership development is built in, with continuing education, peer study clubs and access to specialists across the network.</p>
+          <p>We offer competitive compensation with a guaranteed daily rate, medical, dental and vision coverage, a 401(k) with company match, paid time off, and malpractice and licensure support.</p>
+          <button type="button" class="li-m-more" data-toast="Full description (prototype)">…see more</button>
+        </section>
+        <section class="li-m-about li-m-company">
+          <h2>About the company</h2>
+          <div class="li-m-co li-m-co-row"><span class="li-m-logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2c-1.9 0-2.7 1-4.1 1S5.6 3 4.1 4.6c-1.9 2-.9 5.6.2 8 1 2.4 1.5 6.3 2.9 7.7.9.9 1.7-.3 2.1-2.3.5-2.4 1.5-2.6 2.7-2.6s2.2.2 2.7 2.6c.4 2 1.2 3.2 2.1 2.3 1.4-1.4 1.9-5.3 2.9-7.7 1.1-2.4 2.1-6 .2-8-1.5-1.6-2.4-.4-3.8-.4s-2.2-1-4.1-1z"/></svg></span><span class="li-m-co-text"><span class="li-m-co-name">Heartland Dental</span><small>Hospitals and Health Care</small></span><button type="button" class="li-m-follow" data-toast="Following (prototype)">+ Follow</button></div>
+          <p>Heartland Dental is a dental support organisation. It handles the business side of its supported practices (operations, training, marketing and technology) so the dentists who own and run them can focus on patient care.</p>
+        </section>
+        <div class="li-m-space" aria-hidden="true"></div>
+      </div>
+      <div class="li-m-foot" id="li-m-foot">
+        <button type="button" class="li-m-apply" data-start>Apply <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button>
+        <button type="button" class="li-m-save" data-toast="Saved (prototype)">Save</button>
+      </div>
+      <button class="li-hint li-hint-m" type="button" data-start>Prototype · tap <b>Apply</b> to start</button>
+    </div>
+  </div>
+
+  <div class="panel-wrap" id="panel" hidden>
+  <div class="panel">
+  <header class="top">
+    <div class="top-left">
+      <a class="li-logo" href="#" aria-label="Restart prototype" data-restart><img src="assets/linkedin-bug.png" alt="LinkedIn"></a>
+      <span class="top-div"></span>
+      <div class="job-ctx">
+        <div class="job-ctx-title">General Dentist</div>
+        <div class="job-ctx-sub">West Alamo Dental Care · San Antonio, TX · Competitive</div>
+      </div>
+    </div>
+    <nav class="stepper" aria-label="Your progress">
+      <ol>
+        <li class="step" data-step="1"><span class="step-dot"><span>1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="step-label">Apply</span></li>
+        <li class="step-line" aria-hidden="true"></li>
+        <li class="step" data-step="2"><span class="step-dot"><span>2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="step-label">Add more jobs</span></li>
+        <li class="step-line" aria-hidden="true"></li>
+        <li class="step" data-step="3"><span class="step-dot"><span>3</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="step-label">Confirm and send</span></li>
+      </ol>
+    </nav>
+    <div class="top-right">
+      <a class="link-quiet" href="#" data-toast="Opens the job post on LinkedIn (prototype)"><span>View job</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+      <button class="notes-btn" id="notes-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg><span>Design notes</span></button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <aside class="rail" id="rail" aria-label="CareerGPT">
+      <div class="rail-head">
+        <img src="assets/sonicjobs-mark.svg" alt="">
+        <div><b>CareerGPT</b><small>Applying to West Alamo Dental Care</small></div>
+      </div>
+      <div class="thread" id="thread" aria-live="polite"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <div class="composer-in">
+          <button type="button" class="plus" id="plus" aria-label="Attach your resume"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <input type="text" placeholder="Ask a follow-up…" aria-label="Message CareerGPT">
+          <button type="submit" class="send" id="send" aria-label="Send"><svg class="ic-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg><svg class="ic-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2"/></svg></button>
+        </div>
+      </form>
+      <p class="rail-foot">CareerGPT can make mistakes. Check the important details before you send.</p>
+    </aside>
+
+    <section class="work" aria-label="Application">
+      <div class="work-scroll" id="work-scroll">
+        <div class="work-inner" id="work-inner"></div>
+      </div>
+      <div class="cta-bar" id="cta"></div>
+    </section>
+  </main>
+  </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <!-- Resume preview: a drawer on desktop, full screen on a phone -->
+  <div class="pv-backdrop" id="pv-backdrop"></div>
+  <aside class="preview" id="preview" aria-label="Resume preview" aria-hidden="true">
+    <div class="pv-h"><div class="pv-t"><b id="pv-name"></b><small id="pv-sub"></small></div><button type="button" class="pv-close" id="pv-close" aria-label="Close preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="pv-body" id="pv-body"></div>
+    <div class="pv-foot" id="pv-foot"></div>
+  </aside>
+
+  <aside class="notes" id="notes" aria-label="Design notes">
+    <div class="notes-h"><b>Why it's built this way</b><button type="button" id="notes-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="notes-body" id="notes-body"></div>
+    <div class="notes-foot"><span>SonicApply redesign · prototype v1</span><button class="btn-text" type="button" id="restart">Restart prototype</button></div>
+  </aside>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
