@@ -440,7 +440,8 @@ h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.
 .bundle:not(.on) .bundle-title .count { color: var(--accent-ink); background: var(--accent-tint); }
 .bundle-title .tag { font-size: 11px; padding: 2px 8px; }
 .tag.pick { color: #fff; background: var(--accent); }
-.bundle-why { font-size: 13px; color: var(--t2); margin-top: 3px; line-height: 1.5; }
+.bundle-count { font-size: 13px; font-weight: 500; color: var(--t2); margin-top: 2px; }
+.bundle-why { grid-column: 1 / -1; font-size: 13px; color: var(--t2); line-height: 1.5; }
 .bundle-why .chg { font-size: 12px; color: var(--t2); border: 1px solid var(--hair); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
 .bundle-why .mix { color: var(--t3); }
 .bundle-n { font-size: 13px; font-weight: 500; color: var(--t2); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }

@@ -878,9 +878,10 @@
     return `<section class="bundle${on ? " on" : ""}${b.id === "exact" ? " exact" : ""}" data-bundle="${b.id}">
       <div class="bundle-h" data-bundle-toggle="${b.id}">
         <span class="cb${on ? (sel === b.jobs.filter(j => tierOf(j) !== "long").length || sel === b.jobs.length ? " on" : " mixed") : ""}">${I.check}</span>
-        <div class="bundle-t"><div class="bundle-title">${esc(b.name)} <span class="count">${b.jobs.length}</span>${b.id === "exact" ? '<span class="tag pick">Top pick</span>' : ""}</div>
-          <div class="bundle-why">${esc(b.why)}${b.changes.length ? " · " : ""}${b.changes.map(c => `<span class="chg">${esc(c)}</span>`).join(" ")} <span class="mix">· ${b.jobs.length === 1 ? qText(b.jobs[0]) : mix}</span></div></div>
-        <span class="bundle-n">${on ? `${sel} selected` : `${I.plus} Add`}</span>
+        <div class="bundle-t"><div class="bundle-title">${esc(b.name)}${b.id === "exact" ? '<span class="tag pick">Top pick</span>' : ""}</div>
+          <div class="bundle-count">${b.jobs.length} ${plural(b.jobs.length, "role")}${on ? `, ${sel} selected` : ""}</div></div>
+        ${on ? "" : `<span class="bundle-n">${I.plus} Add</span>`}
+        <div class="bundle-why">${esc(b.why)}${b.changes.length ? " · " : ""}${b.changes.map(c => `<span class="chg">${esc(c)}</span>`).join(" ")} <span class="mix">· ${b.jobs.length === 1 ? qText(b.jobs[0]) : mix}</span></div>
       </div>
       ${on ? `<div class="bundle-jobs">${b.jobs.map(j => { const s = state.selected.has(j.id); return jobRow(j, s, b.jobs.length > 1, !s && capped && tierOf(j) !== "long" ? "Tomorrow" : ""); }).join("")}</div>` : ""}
     </section>`;
