@@ -387,6 +387,13 @@
     $("#email-tag").textContent = "Done"; $("#email-tag").classList.remove("accent");
     $("#email-change").addEventListener("click", changeEmail);
     user(v);
+    if (state.identity === "new" && state.upload) {
+      /* Email changed after an upload: keep the resume and refill the form from it instead of asking again. */
+      $("#sec-resume").hidden = false; state.formActive = true;
+      await fillFromResume();
+      await agent(`Same resume, new email. I kept ${state.upload} and refilled the form from it.`, { think: 400, status: "Resume kept" });
+      return;
+    }
     if (state.identity === "new") {
       $("#sec-resume").hidden = false;
       renderCta1();
@@ -407,7 +414,7 @@
   function changeEmail() {
     if (state.processing) return;
     clearInterval(state.resendTick);
-    Object.assign(state, { identity: null, lookup: null, email: null, unlocked: false, verified: false, resumeConfirmed: false, formActive: false, filled: false, resume: null, resumeRow: null, startRow: null, otpMode: "send", answers: {}, a: { backup: null, locpref: null, relocate: null } });
+    Object.assign(state, { identity: null, lookup: null, email: null, unlocked: false, verified: false, resumeConfirmed: false, formActive: false, filled: false, resume: state.upload || null, resumeRow: null, startRow: null, otpMode: "send", answers: {}, a: { backup: null, locpref: null, relocate: null } });
     renderStep1(); renderCta1();
     agent("Sure, which email should I use?", { think: 250, status: "Start with your email" });
   }
@@ -633,7 +640,7 @@
         if (s !== stage) { stage = s; const e = $("#proc-e"); e.textContent = STAGES[s].e; e.classList.remove("pop"); void e.offsetWidth; e.classList.add("pop"); $("#proc-t").textContent = STAGES[s].t; }
         $("#proc-i").style.width = (p * 100) + "%";
         $("#proc-p").textContent = Math.round(p * 100) + "% complete";
-        if (p < 1) requestAnimationFrame(tick); else { state.resume = name; state.processing = false; resolve(); }
+        if (p < 1) requestAnimationFrame(tick); else { state.resume = name; state.upload = name; state.processing = false; resolve(); }
       };
       requestAnimationFrame(tick);
     });
@@ -902,7 +909,7 @@
       </div>
       <div class="s2-rest${intro ? " hold" : ""}" id="s2-rest">
       <div class="pool-h"><h2>What else could work?</h2></div>
-      <p class="why-line">${I.sparkle}<span>We've found <b>${nMatches}</b> close ${plural(nMatches, "match", "matches")} to the role you're applying for</span></p>
+      <p class="why-line">${I.sparkle}<span>We've found <b>${nMatches}</b> close ${plural(nMatches, "match", "matches")} to the role you applied to</span></p>
       <p class="cap-line">${I.shield}<span>Up to <b>${DAILY_GOAL} applications a day</b>. ${state.sent.length} sent, so up to <b>${capLeft()}</b> here${queued().length && atCap() ? `; the other <b>${queued().length}</b> go out first tomorrow` : ""}.</span></p>
       ${near.map(bundleHtml).join("")}
       ${far.length ? `<button class="btn-text more-opts" type="button" id="more-opts">More options (${far.length}): ${far.slice(0, SHOW).map(b => b.label.split(",")[0]).filter((v, i, a) => a.indexOf(v) === i).join(", ")}</button>` : ""}
