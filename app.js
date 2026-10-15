@@ -204,6 +204,30 @@
   const sel = (id, opts, value, why, placeholder) => `<div class="f" id="${id}-w"><label for="${id}">${placeholder}${why ? ` <span class="need">Needs you</span><span class="ok">${I.check}</span>` : ""}</label><select id="${id}">${value === "" ? `<option value="">Choose</option>` : ""}${opts.map(o => `<option${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>${why ? `<div class="hint">${esc(why)}</div>` : ""}</div>`;
   const field = (id, label, why, ph = "") => `<div class="f" id="${id}-w"><label for="${id}">${label} <span class="need">Needs you</span><span class="ok">${I.check}</span></label><input id="${id}" value="" placeholder="${esc(ph)}"><div class="hint">${esc(why)}</div></div>`;
 
+  /* v2: nothing of the form shows until it has something to say. After the resume, the answers it covered collapse into a
+     summary at the bottom (Edit opens the full form); the questions only the candidate can answer sit above it. */
+  const val = id => (($("#" + id) && $("#" + id).value) || "").trim();
+  function showForm() { $("#form-rest").hidden = false; $("#consent").hidden = false; }
+  function setEditing(on) {
+    $("#edit-fields").hidden = !on;
+    $("#sec-summary").hidden = on || state.byHand;
+    $("#edit-done-row").hidden = !!state.byHand;
+    if (on) { const f = $("#edit-fields"); f.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" }); }
+  }
+  function ensureVisible(el) { if (el && el.closest("#edit-fields") && $("#edit-fields").hidden) setEditing(true); }
+  function renderSummary() {
+    const rows = [];
+    const contact = [[val("f-first"), val("f-last")].filter(Boolean).join(" "), val("f-email"), val("f-phone")].filter(Boolean).join(" · ");
+    if (contact) rows.push(["Contact", contact]);
+    const addr = [val("f-street"), val("f-city"), [val("f-state"), val("f-zip")].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    if (addr) rows.push(["Address", addr]);
+    const bg = [val("f-title"), val("f-school"), val("f-grad") && "Class of " + val("f-grad")].filter(Boolean).join(" · ");
+    if (bg) rows.push(["Background", bg]);
+    const eeo = ["f-gender", "f-race", "f-disability", "f-veteran"].map(val);
+    if (eeo.every(Boolean)) rows.push(["Voluntary questions", eeo.every(v => v === EEO[0]) ? "All set to Prefer not to say. CareerGPT never guesses these." : "Answered"]);
+    $("#sum-list").innerHTML = rows.map(([k, v]) => `<li>${I.check}<span><b>${esc(k)}</b>${esc(v)}</span></li>`).join("");
+  }
+
   function renderStep1() {
     setWork(`
       <h1>Your application</h1>
@@ -236,7 +260,30 @@
         </div>
       </section>
 
-      <div id="form-rest" class="form-rest is-dim">
+      <div id="form-rest" class="form-rest" hidden>
+      <section class="sec focus" id="sec-pref">
+        <div class="sec-h"><div class="sec-title">A few things only you can answer</div><span class="tag accent" id="pref-tag">3 need you</span></div>
+        <div class="grid2">
+          <div class="span2">${field("f-backup", "Backup email", W.backup, "A second address")}</div>
+          <div class="f" id="f-locpref-w"><label for="f-locpref">First location preference <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
+            <select id="f-locpref"><option value="">Choose a city</option>${LOC.map(o => `<option value="${o.value}">${o.value}, TX</option>`).join("")}</select>
+            <div class="hint">${esc(W.locpref)}</div>
+          </div>
+          <div class="f" id="f-relocate-w"><label>Open to relocating anywhere? <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
+            <div class="seg" id="f-relocate"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div>
+            <div class="hint">${esc(W.relocate)}</div>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="sec" id="sec-summary" hidden>
+        <div class="sec-h"><div class="sec-title">What I filled in for you</div><span class="tag" data-fill-tag>From your resume</span></div>
+        <ul class="sum" id="sum-list"></ul>
+        <div class="sum-act"><button class="btn btn-secondary" type="button" id="sum-edit">Edit</button></div>
+      </section>
+
+      <div id="edit-fields" hidden>
       <section class="sec">
         <div class="sec-h"><div class="sec-title">Contact</div><span class="tag" data-fill-tag>From your resume</span></div>
         <div class="grid2">
@@ -244,7 +291,6 @@
           ${field("f-last", "Last name", W.last, "Doe")}
           ${field("f-email", "Email", W.email, "you@example.com")}
           ${field("f-phone", "Phone", W.phone, "(555) 123-4567")}
-          <div class="span2">${field("f-backup", "Backup email", W.backup, "A second address")}</div>
         </div>
       </section>
 
@@ -267,20 +313,6 @@
         </div>
       </section>
 
-      <section class="sec" id="sec-pref">
-        <div class="sec-h"><div class="sec-title">Preferences</div><span class="tag" id="pref-tag">Not on a resume</span></div>
-        <div class="grid2">
-          <div class="f" id="f-locpref-w"><label for="f-locpref">First location preference <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
-            <select id="f-locpref"><option value="">Choose a city</option>${LOC.map(o => `<option value="${o.value}">${o.value}, TX</option>`).join("")}</select>
-            <div class="hint">${esc(W.locpref)}</div>
-          </div>
-          <div class="f" id="f-relocate-w"><label>Open to relocating anywhere? <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
-            <div class="seg" id="f-relocate"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div>
-            <div class="hint">${esc(W.relocate)}</div>
-          </div>
-        </div>
-      </section>
-
       <section class="sec" id="sec-eeo">
         <div class="sec-h"><div class="sec-title">Voluntary self-identification</div><span class="tag">Optional</span></div>
         <div class="eeo-summary"><span>Gender, race, disability and veteran status are all set to <b>Prefer not to say</b>. CareerGPT never guesses these.</span><button class="btn-text" type="button" id="eeo-edit">Edit</button></div>
@@ -294,9 +326,11 @@
           <div class="hint" style="margin-top:10px">${esc(W.eeo)}</div>
         </div>
       </section>
+      <div class="sum-act" id="edit-done-row"><button class="btn btn-primary" type="button" id="edit-done">Done editing</button></div>
+      </div>
       </div>
 
-      <p class="consent">By submitting, you agree to an AI agent submitting this application on West Alamo Dental Care's careers site, and to the <a href="#" data-toast="Terms of service (prototype)">terms of service</a> and <a href="#" data-toast="Privacy policy (prototype)">privacy policy</a>.</p>
+      <p class="consent" id="consent" hidden>By submitting, you agree to an AI agent submitting this application on West Alamo Dental Care's careers site, and to the <a href="#" data-toast="Terms of service (prototype)">terms of service</a> and <a href="#" data-toast="Privacy policy (prototype)">privacy policy</a>.</p>
     `);
     renderCta1();
     bindEmailStart();
@@ -315,6 +349,8 @@
     $("#f-backup").addEventListener("change", e => { if (e.target.value.trim()) setAnswer("backup", e.target.value.trim(), "form"); });
     $$("#form-rest input, #form-rest select").forEach(el => el.addEventListener("input", updateProgress));
     $("#eeo-edit").addEventListener("click", openEeo);
+    $("#sum-edit").addEventListener("click", () => setEditing(true));
+    $("#edit-done").addEventListener("click", () => { setEditing(false); $("#sec-summary").scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" }); });
     bindToasts();
     setTimeout(() => { const i = $("#f-start"); if (i && !state.identity) i.focus(); }, 350);
   }
@@ -383,7 +419,7 @@
     $("#sec-unlock").innerHTML = `<div class="sec-h"><div class="sec-title">${I.shield} Verified by text</div><span class="tag">Done</span></div><p class="hint" style="font-size:14px;color:var(--t2);margin:0">That's the only code you'll enter. It also covers sending the applications at the end.</p>`;
     $("#sec-resume").hidden = false;
     renderSavedResume();
-    $("#form-rest").classList.remove("is-dim");
+    showForm(); $("#sec-summary").hidden = false; renderSummary();
     $$("[data-fill-tag]").forEach(t => { t.textContent = "Saved from your last application"; });
     renderCta1();
     const P = D.saved.profile;
@@ -391,8 +427,8 @@
     const fillAll = (async () => {
       for (const [id, v] of seq) {
         const el = $("#" + id); el.value = v;
-        const w = el.closest(".f"); w.classList.remove("flash"); void w.offsetWidth; w.classList.add("flash", "done");
-        updateProgress();
+        el.closest(".f").classList.add("done");
+        renderSummary(); updateProgress();
         await wait(70);
       }
       state.a.backup = P.backupEmail; state.a.relocate = P.relocate;
@@ -526,8 +562,9 @@
 
   function startByHand() {
     if (state.formActive) return;
-    state.formActive = true; state.filled = true;
-    $("#form-rest").classList.remove("is-dim");
+    state.formActive = true; state.filled = true; state.byHand = true;
+    showForm(); $("#sec-summary").hidden = true; $("#edit-fields").hidden = false; $("#edit-done-row").hidden = true;
+    $("#edit-fields").after($("#sec-pref"));
     $$("[data-fill-tag]").forEach(t => { t.textContent = "Type your answers"; });
     ["f-backup", "f-locpref", "f-relocate"].forEach(id => $(`#${id}-w`).classList.add("needs"));
     renderCta1();
@@ -544,7 +581,7 @@
     const an = $("#ans-n"); if (an) an.textContent = n;
     const bar = $("#bar-i"); if (bar) bar.style.width = Math.min(100, n / 19 * 100) + "%";
     const left = ["backup", "locpref", "relocate"].filter(k => !state.a[k]).length;
-    const tag = $("#pref-tag"); if (tag) { tag.textContent = left ? `${left} need${left === 1 ? "s" : ""} you` : "Done"; tag.classList.toggle("accent", left > 0); }
+    const tag = $("#pref-tag"); if (tag) { tag.textContent = left ? `${left} need${left === 1 ? "s" : ""} you` : "Done"; tag.classList.toggle("accent", left > 0); const sp = $("#sec-pref"); if (sp) sp.classList.toggle("focus", left > 0); }
     if (state.identity === "new" && state.filled && !state.processing && n < 19) setStatus(`${n} of 19 filled · ${19 - n} to go`);
     if (state.identity === "new" && n >= 19) setStatus("Ready to submit");
     syncSubmit();
@@ -575,8 +612,8 @@
     if (source === "form" && state.pending[key]) state.pending[key].answer(value);
     updateProgress();
   }
-  function openEeo() { const s = $("#sec-eeo"); if (!s) return; s.classList.add("open"); s.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" }); }
-  function focusField(id) { const el = $("#" + id); if (!el) return; el.closest(".f").classList.add("needs"); el.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" }); el.focus(); }
+  function openEeo() { const s = $("#sec-eeo"); if (!s) return; ensureVisible(s); s.classList.add("open"); s.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" }); }
+  function focusField(id) { const el = $("#" + id); if (!el) return; ensureVisible(el); el.closest(".f").classList.add("needs"); el.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" }); el.focus(); }
 
   /* Resume: processing card (6s, four emoji stages, progress bar), then fields fill one by one. */
   function runProcessing(name) {
@@ -606,21 +643,21 @@
     $("#resume-tag").textContent = "Uploaded";
     $("#resume-tag").classList.remove("accent");
     $("[data-change]").addEventListener("click", openFilePicker);
-    $("#form-rest").classList.remove("is-dim");
+    showForm(); $("#sec-summary").hidden = !$("#edit-fields").hidden || !!state.byHand;
     state.filled = true;
     if (state.identity === "returning") state.resumeConfirmed = true;
     renderCta1();
     const seq = [["f-first", C.first], ["f-last", C.last], ["f-email", $("#f-email").value || C.email], ["f-phone", C.phone], ["f-street", C.street], ["f-city", C.city], ["f-state", C.state], ["f-zip", C.zip], ["f-title", C.title], ["f-school", C.school], ["f-grad", C.gradYear]];
     for (const [id, v] of seq) {
       const el = $("#" + id); el.value = v;
-      const w = el.closest(".f"); w.classList.remove("flash"); void w.offsetWidth; w.classList.add("flash", "done");
-      if (id === "f-street" && !isMobile()) w.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
-      updateProgress();
+      el.closest(".f").classList.add("done");
+      renderSummary(); updateProgress();
       await wait(120);
     }
     ["backup", "locpref", "relocate"].forEach(k => { if (!state.a[k]) $(`#f-${k}-w`).classList.add("needs"); });
     updateProgress();
-    if (!isMobile()) $("#sec-resume").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    renderSummary();
+    $("#sec-pref").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
   }
 
   async function onResume(name) {
@@ -662,6 +699,7 @@
 
   function shakeField(key) {
     const w = $(`#${key}-w`) || $(`#f-${key}-w`); if (!w) return;
+    ensureVisible(w);
     w.classList.add("needs");
     w.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
     w.classList.remove("shake"); void w.offsetWidth; w.classList.add("shake");
