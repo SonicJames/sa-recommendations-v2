@@ -866,7 +866,7 @@
   const jobRow = (j, on, showQ, tag) => `<div class="job${!on ? " off" : ""}${tag ? " queued" : ""}" data-job="${j.id}">
         <div class="mono">${mono(j.company)}</div>
         <div><div class="jt">${esc(j.title)} · ${esc(j.company)}</div><div class="jm">${esc(placeText(j))} · ${practiceText(j)}${j.shift !== FT ? " · " + esc(j.shift) : ""}${j.pay ? " · " + esc(j.pay) : ""}${j.early ? ' · <span class="early">Early applicant</span>' : ""}</div>${showQ ? `<div class="jq${leftQ(j).length ? "" : " ready"}">${qText(j)}</div>` : ""}</div>
-        <span class="job-r">${tag ? `<span class="tmrw">${esc(tag)}</span>` : ""}<span class="cb${on ? " on" : ""}">${I.check}</span></span>
+        <span class="job-r"><button type="button" class="btn-details" data-details="${j.id}">View details</button>${tag ? `<span class="tmrw">${esc(tag)}</span>` : ""}<span class="cb${on ? " on" : ""}">${I.check}</span></span>
       </div>`;
 
   function bundleHtml(b) {
@@ -879,10 +879,10 @@
       <div class="bundle-h" data-bundle-toggle="${b.id}">
         <span class="cb${on ? (sel === b.jobs.filter(j => tierOf(j) !== "long").length || sel === b.jobs.length ? " on" : " mixed") : ""}">${I.check}</span>
         <div class="bundle-t"><div class="bundle-title">${esc(b.name)} <span class="count">${b.jobs.length}</span>${b.id === "exact" ? '<span class="tag pick">Top pick</span>' : ""}</div>
-          <div class="bundle-why">${esc(b.why)}${b.changes.length ? " · " : ""}${b.changes.map(c => `<span class="chg">${esc(c)}</span>`).join(" ")} <span class="mix">· ${mix}</span></div></div>
+          <div class="bundle-why">${esc(b.why)}${b.changes.length ? " · " : ""}${b.changes.map(c => `<span class="chg">${esc(c)}</span>`).join(" ")} <span class="mix">· ${b.jobs.length === 1 ? qText(b.jobs[0]) : mix}</span></div></div>
         <span class="bundle-n">${on ? `${sel} selected` : `${I.plus} Add`}</span>
       </div>
-      ${on ? `<div class="bundle-jobs">${b.jobs.map(j => { const s = state.selected.has(j.id); return jobRow(j, s, true, !s && capped && tierOf(j) !== "long" ? "Tomorrow" : ""); }).join("")}</div>` : ""}
+      ${on ? `<div class="bundle-jobs">${b.jobs.map(j => { const s = state.selected.has(j.id); return jobRow(j, s, b.jobs.length > 1, !s && capped && tierOf(j) !== "long" ? "Tomorrow" : ""); }).join("")}</div>` : ""}
     </section>`;
   }
 
@@ -890,6 +890,7 @@
   function renderStep2(rerender, quiet, intro) {
     const bs = bundles(), exact = bs.find(b => b.id === "exact"), hidden = hiddenSameEmployer();
     const near = visibleBundles(), far = hiddenBundles();
+    const nMatches = near.reduce((n, b) => n + b.jobs.length, 0);
     const st = workScroll.scrollTop;
     setWork(`
       <div class="black-card sent-banner" role="status">
@@ -898,8 +899,8 @@
         <div class="bc-right">Just now</div>
       </div>
       <div class="s2-rest${intro ? " hold" : ""}" id="s2-rest">
-      <div class="pool-h"><h2>What else could work?</h2><span class="live"><b id="live-n">${state.selected.size}</b> ${plural(state.selected.size, "job")} selected</span></div>
-      <p class="why-line">${I.sparkle}<span>${state.selected.size ? `Here are some very close matches we can apply to for you easily. We've selected <b>${state.selected.size}</b> ${plural(state.selected.size, "job")} for you. Any differences are highlighted in the details below.` : `Here are some very close matches we can apply to for you easily. Pick any that look right. Any differences are highlighted in the details below.`}</span></p>
+      <div class="pool-h"><h2>What else could work?</h2></div>
+      <p class="why-line">${I.sparkle}<span>We've found <b>${nMatches}</b> close ${plural(nMatches, "match", "matches")} to the role you're applying for</span></p>
       <p class="cap-line">${I.shield}<span>Up to <b>${DAILY_GOAL} applications a day</b>. ${state.sent.length} sent, so up to <b>${capLeft()}</b> here${queued().length && atCap() ? `; the other <b>${queued().length}</b> go out first tomorrow` : ""}.</span></p>
       ${near.map(bundleHtml).join("")}
       ${far.length ? `<button class="btn-text more-opts" type="button" id="more-opts">More options (${far.length}): ${far.slice(0, SHOW).map(b => b.label.split(",")[0]).filter((v, i, a) => a.indexOf(v) === i).join(", ")}</button>` : ""}
@@ -912,11 +913,11 @@
       const cta = $("#cta"); if (cta) cta.classList.add("hold");
       setTimeout(() => { const r = $("#s2-rest"); if (r) r.classList.remove("hold"); const c = $("#cta"); if (c) c.classList.remove("hold"); }, reduce ? 300 : SENT_HOLD_MS);
     }
-    if (rerender) { workScroll.scrollTop = Math.min(st, 180); const n = $("#live-n"); n.classList.remove("pop"); void n.offsetWidth; n.classList.add("pop"); }
+    if (rerender) workScroll.scrollTop = Math.min(st, 180);
     $$("[data-bundle-toggle]").forEach(h => h.addEventListener("click", () => toggleBundle(h.dataset.bundleToggle, "form")));
     $$(".job").forEach(row => row.addEventListener("click", e => { e.stopPropagation(); toggleJob(row.dataset.job); }));
   }
-  function rerenderStep2() { const st = workScroll.scrollTop; renderStep2(false, true); workScroll.scrollTop = st; const n = $("#live-n"); if (n) n.textContent = state.selected.size; }
+  function rerenderStep2() { const st = workScroll.scrollTop; renderStep2(false, true); workScroll.scrollTop = st; }
   function toggleJob(id) {
     if (state.selected.has(id)) state.selected.delete(id);
     else if (atCap()) { capToast(); const row = $(`.job[data-job="${id}"]`); if (row) { row.classList.remove("shake"); void row.offsetWidth; row.classList.add("shake"); } return; }
@@ -1252,7 +1253,26 @@
   $("#notes-close").addEventListener("click", () => $("#notes").classList.remove("open"));
   $("#restart").addEventListener("click", () => location.reload());
   document.addEventListener("click", e => { if (e.target.closest("[data-restart]")) { e.preventDefault(); location.reload(); } });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") $("#notes").classList.remove("open"); });
+
+  /* Job details popup: read-only, closes on button, backdrop or Escape. */
+  let detailsReturn = null;
+  function closeDetails() { const m = $("#job-details"); if (m) m.remove(); if (detailsReturn) { detailsReturn.focus(); detailsReturn = null; } }
+  function openDetails(id, trigger) {
+    const j = D.jobs.find(x => x.id === id); if (!j) return;
+    closeDetails(); detailsReturn = trigger || null;
+    const rows = [["Location", placeText(j)], ["Practice", practiceText(j)], ["Hours", j.shift], ["Pay", j.pay], ["Posted", j.postedDays === 0 ? "Today" : `${j.postedDays} ${plural(j.postedDays, "day")} ago`]].filter(r => r[1]);
+    const m = document.createElement("div");
+    m.id = "job-details"; m.className = "modal"; m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true"); m.setAttribute("aria-labelledby", "jd-title");
+    m.innerHTML = `<div class="modal-card"><div class="modal-h"><div class="mono">${esc(mono(j.company))}</div><div><h3 id="jd-title">${esc(j.title)}</h3><div class="jm">${esc(j.company)}</div></div></div>
+      <dl class="modal-rows">${rows.map(r => `<dt>${r[0]}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>
+      ${j.early ? '<p class="modal-note">Early applicant: this role was posted recently, so applying now puts you near the front.</p>' : ""}
+      <button type="button" class="btn-close" id="jd-close">Close</button></div>`;
+    m.addEventListener("click", e => { if (e.target === m) closeDetails(); });
+    document.body.appendChild(m);
+    $("#jd-close").addEventListener("click", closeDetails); $("#jd-close").focus();
+  }
+  document.addEventListener("click", e => { const b = e.target.closest("[data-details]"); if (b) { e.stopPropagation(); e.preventDefault(); openDetails(b.dataset.details, b); } }, true);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { $("#notes").classList.remove("open"); closeDetails(); } });
 
   function openPanel() { const p = $("#panel"); if (!p.hidden) return; p.hidden = false; if (!state.opened) { state.opened = true; setStep(1); renderStep1(); runStep1Chat(); } }
   function closePanel() { $("#panel").hidden = true; }
