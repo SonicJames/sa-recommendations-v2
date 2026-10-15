@@ -195,7 +195,7 @@ window.SA_DATA = (() => {
   };
 
   const tiers = {
-    ready: { id: "ready", title: "1-click apply", blurb: "Your first application already answers everything these ask. Nothing more to fill in." },
+    ready: { id: "ready", title: "No extra questions", blurb: "Your first application already answers everything these ask. Nothing more to fill in." },
     quick: { id: "quick", title: "A few quick questions", blurb: "Answered once, reused for all of them." },
     long: { id: "long", title: "Longer applications", blurb: "Cover letter or references. Opt in for the right practice." },
   };

@@ -870,7 +870,7 @@
 
   const placeText = j => j.city === "San Antonio" ? "San Antonio · same city as the job" : j.state === "TX" ? `${j.city}, TX · ${j.miles} mi away` : `${j.city}, ${j.state}`;
   const practiceText = j => j.practice === "private" ? "Private practice" : "Group practice";
-  const qText = j => { const n = leftQ(j).length; return n ? (tierOf(j) === "long" ? `Longer form · ${n} extra ${plural(n, "question")}` : `${n} extra ${plural(n, "question")}${n < j.extra.length ? ` · ${j.extra.length - n} reused` : ""}`) : "1-click apply · no extra questions"; };
+  const qText = j => { const n = leftQ(j).length; return n ? (tierOf(j) === "long" ? `Longer form · ${n} extra ${plural(n, "question")}` : `${n} extra ${plural(n, "question")}${n < j.extra.length ? ` · ${j.extra.length - n} reused` : ""}`) : "No extra questions"; };
   const jobRow = (j, on, showQ, tag) => `<div class="job${!on ? " off" : ""}${tag ? " queued" : ""}" data-job="${j.id}">
         <div class="mono">${mono(j.company)}</div>
         <div><div class="jt">${esc(j.title)} · ${esc(j.company)}</div><div class="jm">${esc(placeText(j))} · ${practiceText(j)}${j.shift !== FT ? " · " + esc(j.shift) : ""}${j.pay ? " · " + esc(j.pay) : ""}${j.early ? ' · <span class="early">Early applicant</span>' : ""}</div>${showQ ? `<div class="jq${leftQ(j).length ? "" : " ready"}">${qText(j)}</div>` : ""}</div>
@@ -947,7 +947,7 @@
     const row = multiRow(bs.map(b => ({ value: b.id, label: b.name, count: b.jobs.length, on: state.bundlesOn.has(b.id) })), (o, on) => { if (on !== state.bundlesOn.has(o.value)) toggleBundle(o.value, "chat"); });
     state.bundleRow = row;
     const onNames = bs.filter(b => state.bundlesOn.has(b.id)).map(b => b.id === "exact" ? `the ${b.jobs.length} in San Antonio` : b.name);
-    await agent(`${exact ? `Only ${exact.jobs.length} other ${A.title} ${plural(exact.jobs.length, "opening")} in the San Antonio area right now, selected: same role, different employer.` : `No other ${A.title} openings in the San Antonio area right now.`} Here's what else could work, closest first. I've also selected ${onNames.filter((_, i) => i > 0).join(" and ") || "nothing else yet"}, ${state.selected.size} roles in all${boost ? `, ${boost} of them 1-click thanks to answers from your last application` : ""}. Add or remove any:`, { think: 1400, thinkLabel: "Searching roles…", meta: `Searched ${total} roles in 2s`, chips: row, links: hiddenBundles().length ? [{ label: "More options", onClick: () => showMoreBundles("chat") }] : null, status: `${state.selected.size} selected · ${state.bundlesOn.size} options` });
+    await agent(`${exact ? `Only ${exact.jobs.length} other ${A.title} ${plural(exact.jobs.length, "opening")} in the San Antonio area right now, selected: same role, different employer.` : `No other ${A.title} openings in the San Antonio area right now.`} Here's what else could work, closest first. I've also selected ${onNames.filter((_, i) => i > 0).join(" and ") || "nothing else yet"}, ${state.selected.size} roles in all${boost ? `, ${boost} of them with no extra questions thanks to answers from your last application` : ""}. Add or remove any:`, { think: 1400, thinkLabel: "Searching roles…", meta: `Searched ${total} roles in 2s`, chips: row, links: hiddenBundles().length ? [{ label: "More options", onClick: () => showMoreBundles("chat") }] : null, status: `${state.selected.size} selected · ${state.bundlesOn.size} options` });
     syncBundleChips();
     state.step2Ready = true;
     await agent(step2Summary(), { think: 500, status: `${state.selected.size} selected · review and continue` });
@@ -955,7 +955,7 @@
   /* One line that also explains the daily limit when more is ticked-able than can go today. */
   function step2Summary() {
     const p = pool(), g = groupsFor(selectedJobs()), k = unionQuestions(g.quick).filter(x => !answered(x)).length, q = queued().length, nOpt = state.bundlesOn.size;
-    const mix = `${g.ready.length} 1-click apply${g.quick.length ? `, ${g.quick.length} with ${k} short ${plural(k, "answer")}` : ""}`;
+    const mix = `${g.ready.length} with no extra questions${g.quick.length ? `, ${g.quick.length} with ${k} short ${plural(k, "answer")}` : ""}`;
     return q && atCap()
       ? `${state.selected.size} selected across ${nOpt} ${plural(nOpt, "option")}: ${mix}. That's today's max of ${DAILY_GOAL} with West Alamo; the other ${q} go out first tomorrow.`
       : `${state.selected.size} selected across ${nOpt} ${plural(nOpt, "option")}: ${mix}. ${capLeft() - state.selected.size} ${plural(capLeft() - state.selected.size, "slot")} left today, so add another option if any fits, or continue.`;
@@ -1020,9 +1020,9 @@
     const verifiedEarly = state.identity === "returning" && state.verified;
     setWork(`
       <h1>Confirm and send</h1>
-      <div class="summary-row"><div class="avatars">${sel.slice(0, 6).map(j => `<span>${mono(j.company)}</span>`).join("")}</div><div class="txt"><b>${sel.length} ${plural(sel.length, "application")}</b>${sel.length - asking > 0 ? ` · <b>${sel.length - asking}</b> 1-click apply` : ""}${asking ? ` · <b>${asking}</b> share ${qs.filter(q => !answered(q)).length} extra ${plural(qs.filter(q => !answered(q)).length, "question")}` : ""}</div></div>
+      <div class="summary-row"><div class="avatars">${sel.slice(0, 6).map(j => `<span>${mono(j.company)}</span>`).join("")}</div><div class="txt"><b>${sel.length} ${plural(sel.length, "application")}</b>${sel.length - asking > 0 ? ` · <b>${sel.length - asking}</b> with no extra questions` : ""}${asking ? ` · <b>${asking}</b> share ${qs.filter(q => !answered(q)).length} extra ${plural(qs.filter(q => !answered(q)).length, "question")}` : ""}</div></div>
       ${qs.length ? `<section class="sec"><div class="sec-h"><div class="sec-title">${allAns ? "Reused from your last application" : "Answer once, I'll reuse it"}</div><span class="tag">${allAns ? "Edit if anything changed" : `${qs.length} ${plural(qs.length, "question")}`}</span></div>${qs.map(qHtml).join("")}</section>`
-        : `<section class="sec"><div class="sec-h"><div class="sec-title">All 1-click apply</div><span class="tag">No extra questions</span></div><p class="hint" style="font-size:14px;color:var(--t2);margin:0">Your first application already answers everything these ${sel.length} employers ask.</p></section>`}
+        : `<section class="sec"><div class="sec-h"><div class="sec-title">No extra questions</div><span class="tag">All set</span></div><p class="hint" style="font-size:14px;color:var(--t2);margin:0">Your first application already answers everything these ${sel.length} employers ask.</p></section>`}
       ${verifiedEarly
         ? `<section class="otp-card ok" id="otp-card"><h2>${I.shield} Verified</h2><p>You confirmed it's you by text at the start, so there's nothing to enter here.</p><div class="otp-ok" style="margin-top:0">Verified by text</div></section>`
         : otpHtml()}
@@ -1150,7 +1150,7 @@
       <section class="goal">
         <div class="goal-h"><h2>Keep going: <b>${n} of ${DAILY_GOAL}</b> today</h2><span class="goal-n">${left} to go</span></div>
         <div class="goal-bar"><i style="width:${n / DAILY_GOAL * 100}%"></i></div>
-        <p>${left === 1 ? "One more" : `${left} more`} and you've hit ${DAILY_GOAL}. ${more.length === 1 ? "This one is" : "All"} 1-click apply, I already have every answer.</p>
+        <p>${left === 1 ? "One more" : `${left} more`} and you've hit ${DAILY_GOAL}. ${more.length === 1 ? "This one has" : "These have"} no extra questions, I already have every answer.</p>
         <ul class="more">${more.map(j => jobRow(j, state.more.has(j.id), false)).join("")}</ul>
         <div class="final-actions"><button class="btn btn-primary" type="button" id="send-more"${onCount ? "" : " disabled"}>Send ${onCount} more ${I.send}</button><button class="btn-text" type="button" id="goal-done">I'm done for today</button></div>
       </section>` : ""}
@@ -1207,7 +1207,7 @@
       return;
     }
     await agent(`All ${n} sent.`, { think: 400, status: `All ${n} sent` });
-    await ask("more", `You're ${left} away from ${DAILY_GOAL} today. ${more.length === 1 ? "This one is" : `These ${more.length} are`} 1-click apply, send ${more.length === 1 ? "it" : "them"}?`, [{ value: "send", label: `Send ${more.length} more` }, { value: "done", label: "I'm done for today" }], {
+    await ask("more", `You're ${left} away from ${DAILY_GOAL} today. ${more.length === 1 ? "This one has" : `These ${more.length} have`} no extra questions, send ${more.length === 1 ? "it" : "them"}?`, [{ value: "send", label: `Send ${more.length} more` }, { value: "done", label: "I'm done for today" }], {
       onPick: (o, first) => { if (!first) return; if (o.value === "send") sendMore("chat"); else { dismissGoal("chat"); agent(`No problem. Tomorrow's matches go to ${notifyEmail()}, change it on the right if you'd rather use another address.`, { think: 300, status: "Done for today" }); } }, think: 350, status: `${left} more to hit ${DAILY_GOAL}`,
     });
   }
@@ -1240,12 +1240,12 @@
       "Pay is written into every option", "Each option carries the floor of its listed salaries ($180K+, $205K+), so pay is a criterion the candidate reads, not a filter they have to find.",
       "Names a jobseeker recognises", "Senior Dentist, Associate Dentist, Lead Dentist or Dental Director. Never Other.",
       "Ten a day, said up front", "The limit sits above the list, in the button's count, and on the rows it affects (a quiet Tomorrow tag). What doesn't fit today leads tomorrow's email.",
-      "Effort as a quiet sub-metric", "1-click or N extra questions sits in grey under each role, never competing with the role itself.",
+      "Effort as a quiet sub-metric", "No extra questions, or N extra questions, sits in grey under each role, never competing with the role itself.",
       "Same controls in two places", "The chips in the chat and the options on the page are the same state. Either one answers the question."],
     3: ["Answer once, apply many", "The extra questions are the union across the quick tier, so three answers cover every job that asks.",
       "OTP last, where it feels fair", "Before 16 applications go out in your name is a reason people accept. OTP first was a tax on strangers.",
       "Celebrate the unlock", "The code boxes turn into the emoji run from today's product. A small peak right before the big send."],
-    4: ["A goal with a bar, not a nag", "Ten in a day. The card shows where you are, and offers only 1-click roles, because every answer is already in hand. One tap, no new OTP.",
+    4: ["A goal with a bar, not a nag", "Ten in a day. The card shows where you are, and offers only roles with no extra questions, because every answer is already in hand. One tap, no new OTP.",
       "Make the exit equal", "I'm done for today sits next to the send button at the same size, and the ending is just as warm.",
       "Say where the replies go", "The email address is shown and editable here, where it matters, instead of buried in settings.",
       "Strong ending", "One black card with the number, then tomorrow's matches as the reason to come back."],
