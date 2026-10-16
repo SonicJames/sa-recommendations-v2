@@ -684,7 +684,7 @@
     updateProgress();
     renderSummary();
     if (state.identity === "new") { collapseIntro(); workScroll.scrollTop = 0; }
-    $("#sec-pref").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    else $("#sec-pref").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
   }
 
   async function onResume(name) {
