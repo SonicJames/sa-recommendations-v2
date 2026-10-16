@@ -208,7 +208,10 @@
      summary at the bottom (Edit opens the full form); the questions only the candidate can answer sit above it. */
   const val = id => (($("#" + id) && $("#" + id).value) || "").trim();
   function showForm() { $("#form-rest").hidden = false; $("#consent").hidden = false; }
+  /* After a new candidate's upload completes, the email, phone and resume steps fold away: the page is just the summary and the remaining questions. Edit brings the phone back. */
+  function collapseIntro() { state.introCollapsed = true; ["sec-email", "sec-phone", "sec-unlock", "sec-resume"].forEach(id => { $("#" + id).hidden = true; }); }
   function setEditing(on) {
+    if (state.introCollapsed) $("#sec-phone").hidden = !on;
     $("#edit-fields").hidden = !on;
     $("#sec-summary").hidden = on || state.byHand;
     $("#edit-done-row").hidden = !!state.byHand;
@@ -421,7 +424,7 @@
   function changeEmail() {
     if (state.processing) return;
     clearInterval(state.resendTick);
-    Object.assign(state, { identity: null, lookup: null, email: null, unlocked: false, verified: false, resumeConfirmed: false, formActive: false, filled: false, resume: state.upload || null, resumeRow: null, startRow: null, otpMode: "send", answers: {}, a: { backup: null, locpref: null, relocate: null } });
+    Object.assign(state, { identity: null, lookup: null, email: null, unlocked: false, verified: false, resumeConfirmed: false, formActive: false, filled: false, introCollapsed: false, resume: state.upload || null, resumeRow: null, startRow: null, otpMode: "send", answers: {}, a: { backup: null, locpref: null, relocate: null } });
     renderStep1(); renderCta1();
     agent("Sure, which email should I use?", { think: 250, status: "Start with your email" });
   }
@@ -680,6 +683,7 @@
     ["backup", "locpref", "relocate"].forEach(k => { if (!state.a[k]) $(`#f-${k}-w`).classList.add("needs"); });
     updateProgress();
     renderSummary();
+    if (state.identity === "new") { collapseIntro(); workScroll.scrollTop = 0; }
     $("#sec-pref").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
   }
 
