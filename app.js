@@ -209,9 +209,9 @@
   const val = id => (($("#" + id) && $("#" + id).value) || "").trim();
   function showForm() { $("#form-rest").hidden = false; $("#consent").hidden = false; }
   /* After a new candidate's upload completes, the email, phone and resume steps fold away: the page is just the summary and the remaining questions. Edit brings the phone back. */
-  function collapseIntro() { state.introCollapsed = true; ["sec-email", "sec-phone", "sec-unlock", "sec-resume"].forEach(id => { $("#" + id).hidden = true; }); }
+  function collapseIntro() { state.introCollapsed = true; ["sec-email", "sec-phone", "sec-unlock", "sec-resume"].forEach(id => { $("#" + id).hidden = true; }); if (!phoneOk()) $("#sec-phone").hidden = false; markPhone(); }
   function setEditing(on) {
-    if (state.introCollapsed) $("#sec-phone").hidden = !on;
+    if (state.introCollapsed) $("#sec-phone").hidden = !on && phoneOk();
     $("#edit-fields").hidden = !on;
     $("#sec-summary").hidden = on || state.byHand;
     $("#edit-done-row").hidden = !!state.byHand;
@@ -353,6 +353,7 @@
     $("#form-rest").addEventListener("input", syncSubmit);
     $("#form-rest").addEventListener("change", syncSubmit);
     $("#f-backup").addEventListener("input", checkBackup);
+    $("#f-phone").addEventListener("blur", () => { $("#f-phone-w").dataset.touched = "1"; markPhone(); });
     $("#f-phone").addEventListener("input", () => { markPhone(); renderSummary(); syncSubmit(); updateProgress(); });
     $("#f-email").addEventListener("input", checkBackup);
     $("#f-backup").addEventListener("change", e => { if (e.target.value.trim() && checkBackup()) setAnswer("backup", e.target.value.trim(), "form"); });
@@ -610,7 +611,9 @@
 
   /* Phone: at least 10 digits. */
   const phoneOk = () => val("f-phone").replace(/\D/g, "").length >= 10;
-  function markPhone() { const w = $("#f-phone-w"); if (!w) return; w.classList.toggle("done", phoneOk()); w.classList.toggle("needs", !phoneOk() && !!val("f-phone")); const t = $("#phone-tag"); if (t) { t.textContent = phoneOk() ? "Done" : "Needs you"; t.classList.toggle("accent", !phoneOk()); } }
+  const PHONE_ERR = "Enter the full 10-digit number, including area code.";
+  function markPhone() { const w = $("#f-phone-w"); if (!w) return; const bad = !phoneOk() && !!val("f-phone"), show = bad && (!!w.dataset.touched || state.introCollapsed); w.classList.toggle("done", phoneOk()); w.classList.toggle("needs", bad); w.classList.toggle("invalid", show);
+    let err = $("#f-phone-err"); if (!err) { err = document.createElement("div"); err.id = "f-phone-err"; err.className = "err"; err.setAttribute("role", "alert"); err.textContent = PHONE_ERR; w.appendChild(err); } err.hidden = !show; const t = $("#phone-tag"); if (t) { t.textContent = phoneOk() ? "Done" : "Needs you"; t.classList.toggle("accent", !phoneOk()); } }
 
   /* Backup email must be a valid address and differ from the main email (case-insensitive). */
   const BACKUP_ERR = "Backup email must be different from your main email.";
@@ -961,7 +964,7 @@
     const meta = sel.length === 0 ? "Add an option or select a role to continue" : `<b>${sel.length}</b> selected${atCap() ? " · today's max" : ""} · ${qs.length ? `${qs.length} extra ${plural(qs.length, "question")} · about ${mins} min` : "no extra questions"}`;
     if (state.step2Ready) setStatus(sel.length ? `${sel.length} selected · ${nOpt} ${plural(nOpt, "option")}${atCap() ? " · today's max" : ""}` : "Add an option to continue");
     setCta(`<div class="cta-in"><div class="cta-meta"><span>${meta}</span></div>
-      <div class="cta-actions"><button class="btn btn-ghost" type="button" id="done-early">Search for other roles</button><button class="btn btn-primary" type="button" id="continue2"${sel.length === 0 ? " disabled" : ""}>${sel.length ? `Continue with ${sel.length} ${plural(sel.length, "job")}` : "Continue"} ${I.arrow}</button></div></div>`);
+      <div class="cta-actions"><button class="btn btn-ghost" type="button" id="done-early">Search for other roles</button><button class="btn btn-primary" type="button" id="continue2"${sel.length === 0 ? " disabled" : ""}>${sel.length ? `Apply to ${sel.length} more ${plural(sel.length, "job")}` : "Continue"} ${I.arrow}</button></div></div>`);
     $("#continue2").addEventListener("click", goStep3);
     $("#done-early").addEventListener("click", () => toast("Search for other roles (prototype)"));
   }
