@@ -243,6 +243,11 @@
         </div>
       </section>
 
+      <section class="sec" id="sec-phone" hidden>
+        <div class="sec-h"><div class="sec-title">Phone number</div><span class="tag accent" id="phone-tag">Needs you</span></div>
+        ${field("f-phone", "Phone", W.phone, "(555) 123-4567")}
+      </section>
+
       <section class="sec" id="sec-unlock" hidden>
         <div class="sec-h"><div class="sec-title">${I.shield} Unlock your saved details</div><span class="tag accent" id="unlock-tag">Needs you</span></div>
         <div id="unlock-box"></div>
@@ -260,28 +265,15 @@
         </div>
       </section>
 
-      <div id="form-rest" class="form-rest" hidden>
-      <section class="sec focus" id="sec-pref">
-        <div class="sec-h"><div class="sec-title">A few things only you can answer</div><span class="tag accent" id="pref-tag">3 need you</span></div>
-        <div class="grid2">
-          <div class="span2">${field("f-backup", "Backup email", W.backup, "A second address")}</div>
-          <div class="f" id="f-locpref-w"><label for="f-locpref">First location preference <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
-            <select id="f-locpref"><option value="">Choose a city</option>${LOC.map(o => `<option value="${o.value}">${o.value}, TX</option>`).join("")}</select>
-            <div class="hint">${esc(W.locpref)}</div>
-          </div>
-          <div class="f" id="f-relocate-w"><label>Open to relocating anywhere? <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
-            <div class="seg" id="f-relocate"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div>
-            <div class="hint">${esc(W.relocate)}</div>
-          </div>
-        </div>
-      </section>
-
-
       <section class="sec" id="sec-summary" hidden>
         <div class="sec-h"><div class="sec-title">What I filled in for you</div><span class="tag" data-fill-tag>From your resume</span></div>
         <ul class="sum" id="sum-list"></ul>
         <div class="sum-act"><button class="btn btn-secondary" type="button" id="sum-edit">Edit</button></div>
       </section>
+
+      <div id="form-rest" class="form-rest" hidden>
+
+
 
       <div id="edit-fields" hidden>
       <section class="sec">
@@ -290,7 +282,6 @@
           ${field("f-first", "First name", W.first, "Jane")}
           ${field("f-last", "Last name", W.last, "Doe")}
           ${field("f-email", "Email", W.email, "you@example.com")}
-          ${field("f-phone", "Phone", W.phone, "(555) 123-4567")}
         </div>
       </section>
 
@@ -328,6 +319,20 @@
       </section>
       <div class="sum-act" id="edit-done-row"><button class="btn btn-primary" type="button" id="edit-done">Done editing</button></div>
       </div>
+      <section class="sec focus" id="sec-pref">
+        <div class="sec-h"><div class="sec-title">Remaining questions the employer is asking</div><span class="tag accent" id="pref-tag">3 need you</span></div>
+        <div class="grid2">
+          <div class="span2">${field("f-backup", "Backup email", W.backup, "A secondary email")}</div>
+          <div class="f" id="f-locpref-w"><label for="f-locpref">First location preference <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
+            <select id="f-locpref"><option value="">Choose a city</option>${LOC.map(o => `<option value="${o.value}">${o.value}, TX</option>`).join("")}</select>
+            <div class="hint">${esc(W.locpref)}</div>
+          </div>
+          <div class="f" id="f-relocate-w"><label>Open to relocating anywhere? <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
+            <div class="seg" id="f-relocate"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div>
+            <div class="hint">${esc(W.relocate)}</div>
+          </div>
+        </div>
+      </section>
       </div>
 
       <p class="consent" id="consent" hidden>By submitting, you agree to an AI agent submitting this application on West Alamo Dental Care's careers site, and to the <a href="#" data-toast="Terms of service (prototype)">terms of service</a> and <a href="#" data-toast="Privacy policy (prototype)">privacy policy</a>.</p>
@@ -345,8 +350,9 @@
     $("#form-rest").addEventListener("input", syncSubmit);
     $("#form-rest").addEventListener("change", syncSubmit);
     $("#f-backup").addEventListener("input", checkBackup);
+    $("#f-phone").addEventListener("input", () => { markPhone(); renderSummary(); syncSubmit(); updateProgress(); });
     $("#f-email").addEventListener("input", checkBackup);
-    $("#f-backup").addEventListener("change", e => { if (e.target.value.trim()) setAnswer("backup", e.target.value.trim(), "form"); });
+    $("#f-backup").addEventListener("change", e => { if (e.target.value.trim() && checkBackup()) setAnswer("backup", e.target.value.trim(), "form"); });
     $$("#form-rest input, #form-rest select").forEach(el => el.addEventListener("input", updateProgress));
     $("#eeo-edit").addEventListener("click", openEeo);
     $("#sum-edit").addEventListener("click", () => setEditing(true));
@@ -387,6 +393,7 @@
     $("#email-tag").textContent = "Done"; $("#email-tag").classList.remove("accent");
     $("#email-change").addEventListener("click", changeEmail);
     user(v);
+    $("#sec-phone").hidden = state.identity === "returning";
     if (state.identity === "new" && state.upload) {
       /* Email changed after an upload: keep the resume and refill the form from it instead of asking again. */
       $("#sec-resume").hidden = false; state.formActive = true;
@@ -425,6 +432,7 @@
     Object.assign(state.answers, D.saved.answers);
     const es = $("#email-box .sub"); if (es) es.textContent = "Welcome back";
     $("#sec-unlock").innerHTML = `<div class="sec-h"><div class="sec-title">${I.shield} Verified by text</div><span class="tag">Done</span></div><p class="hint" style="font-size:14px;color:var(--t2);margin:0">That's the only code you'll enter. It also covers sending the applications at the end.</p>`;
+    $("#sec-phone").hidden = false;
     $("#sec-resume").hidden = false;
     renderSavedResume();
     showForm(); $("#sec-summary").hidden = false; renderSummary();
@@ -583,9 +591,10 @@
   }
 
   function updateProgress() {
+    markPhone();
     if (!state.filled) return;
     const fields = $$("#form-rest input, #form-rest select");
-    let n = fields.filter(f => f.value && f.value.trim()).length + (state.a.relocate ? 1 : 0) + (state.resume ? 1 : 0);
+    let n = fields.filter(f => f.value && f.value.trim()).length + (state.a.relocate ? 1 : 0) + (state.resume ? 1 : 0) + (val("f-phone") ? 1 : 0);
     const an = $("#ans-n"); if (an) an.textContent = n;
     const bar = $("#bar-i"); if (bar) bar.style.width = Math.min(100, n / 19 * 100) + "%";
     const left = ["backup", "locpref", "relocate"].filter(k => !state.a[k]).length;
@@ -596,17 +605,23 @@
     if (n >= 19) { const b = $("#submit1"); if (b && !b.disabled) b.classList.add("pulse"); }
   }
 
-  /* Backup email must differ from the main email (case-insensitive). */
+  /* Phone: at least 10 digits. */
+  const phoneOk = () => val("f-phone").replace(/\D/g, "").length >= 10;
+  function markPhone() { const w = $("#f-phone-w"); if (!w) return; w.classList.toggle("done", phoneOk()); w.classList.toggle("needs", !phoneOk() && !!val("f-phone")); const t = $("#phone-tag"); if (t) { t.textContent = phoneOk() ? "Done" : "Needs you"; t.classList.toggle("accent", !phoneOk()); } }
+
+  /* Backup email must be a valid address and differ from the main email (case-insensitive). */
   const BACKUP_ERR = "Backup email must be different from your main email.";
+  const BACKUP_FMT_ERR = "Enter a valid email address, like name@example.com.";
   const sameAsMain = v => { const m = (($("#f-email") && $("#f-email").value) || "").trim().toLowerCase(), b = String(v || "").trim().toLowerCase(); return !!m && !!b && m === b; };
+  const backupBad = v => { v = String(v || "").trim(); return v && !EMAIL_RE.test(v) ? BACKUP_FMT_ERR : sameAsMain(v) ? BACKUP_ERR : ""; };
   function checkBackup() {
     const w = $("#f-backup-w"), inp = $("#f-backup"); if (!w || !inp) return true;
     let err = $("#f-backup-err");
-    if (!err) { err = document.createElement("div"); err.id = "f-backup-err"; err.className = "err"; err.setAttribute("role", "alert"); err.hidden = true; err.textContent = BACKUP_ERR; w.appendChild(err); }
-    const bad = sameAsMain(inp.value);
-    err.hidden = !bad; w.classList.toggle("invalid", bad);
-    if (bad) { state.a.backup = null; w.classList.remove("done", "flash"); w.classList.add("needs"); updateProgress(); }
-    return !bad;
+    if (!err) { err = document.createElement("div"); err.id = "f-backup-err"; err.className = "err"; err.setAttribute("role", "alert"); err.hidden = true; w.appendChild(err); }
+    const msg = backupBad(inp.value);
+    err.textContent = msg; err.hidden = !msg; w.classList.toggle("invalid", !!msg);
+    if (msg) { state.a.backup = null; w.classList.remove("done", "flash"); w.classList.add("needs"); updateProgress(); }
+    return !msg;
   }
 
   function setAnswer(key, value, source) {
@@ -655,7 +670,7 @@
     state.filled = true;
     if (state.identity === "returning") state.resumeConfirmed = true;
     renderCta1();
-    const seq = [["f-first", C.first], ["f-last", C.last], ["f-email", $("#f-email").value || C.email], ["f-phone", C.phone], ["f-street", C.street], ["f-city", C.city], ["f-state", C.state], ["f-zip", C.zip], ["f-title", C.title], ["f-school", C.school], ["f-grad", C.gradYear]];
+    const seq = [["f-first", C.first], ["f-last", C.last], ["f-email", $("#f-email").value || C.email], ["f-phone", val("f-phone") || C.phone], ["f-street", C.street], ["f-city", C.city], ["f-state", C.state], ["f-zip", C.zip], ["f-title", C.title], ["f-school", C.school], ["f-grad", C.gradYear]];
     for (const [id, v] of seq) {
       const el = $("#" + id); el.value = v;
       el.closest(".f").classList.add("done");
@@ -716,7 +731,7 @@
   /* The Submit button stays greyed out until every answer is in, the backup email differs from the main one, and (returning) the resume is confirmed. */
   function formComplete() {
     if (!REQUIRED1.every(id => { const el = $("#" + id); return el && (el.value || "").trim(); })) return false;
-    if (!state.a.relocate || sameAsMain($("#f-backup").value)) return false;
+    if (!state.a.relocate || backupBad($("#f-backup").value) || !phoneOk()) return false;
     return !(state.identity === "returning" && !state.resumeConfirmed);
   }
   function syncSubmit() {
@@ -726,7 +741,8 @@
   async function submitFirst() {
     const required = REQUIRED1;
     const missing = required.filter(id => !($("#" + id).value || "").trim());
-    if (!checkBackup()) { shakeField("f-backup"); agent("Your backup email can't be the same as your main one. Please add a different address.", { think: 250 }); return; }
+    if (!phoneOk() && val("f-phone")) { shakeField("f-phone"); agent("That phone number looks short. The employer needs the full number, with area code, to call you.", { think: 250 }); return; }
+    if (!checkBackup()) { shakeField("f-backup"); agent(backupBad($("#f-backup").value) === BACKUP_FMT_ERR ? "That backup email doesn't look like an email address. Please check it." : "Your backup email can't be the same as your main one. Please add a different address.", { think: 250 }); return; }
     if (!state.a.relocate) missing.push("f-relocate");
     if (missing.length) {
       shakeField(missing[0]);
@@ -906,8 +922,7 @@
         <div class="bc-right">Just now</div>
       </div>
       <div class="s2-rest${intro ? " hold" : ""}" id="s2-rest">
-      <div class="pool-h"><h2>What else could work?</h2></div>
-      <p class="why-line">${I.sparkle}<span>We've found <b>${nMatches}</b> close ${plural(nMatches, "match", "matches")} to the role you applied to</span></p>
+      <div class="pool-h"><h2>We've sent your application, but we've found <b>${nMatches}</b> other close ${plural(nMatches, "match", "matches")} to the role you applied to</h2></div>
       <p class="cap-line">${I.shield}<span>Up to <b>${DAILY_GOAL} applications a day</b>. ${state.sent.length} sent, so up to <b>${capLeft()}</b> here${queued().length && atCap() ? `; the other <b>${queued().length}</b> go out first tomorrow` : ""}.</span></p>
       ${near.map(bundleHtml).join("")}
       ${far.length ? `<button class="btn-text more-opts" type="button" id="more-opts">More options (${far.length}): ${far.slice(0, SHOW).map(b => b.label.split(",")[0]).filter((v, i, a) => a.indexOf(v) === i).join(", ")}</button>` : ""}
@@ -1127,47 +1142,37 @@
     collapseThread(`Confirm and send · ${sel.length} sent`);
     renderFinal(); runFinalChat();
   }
-  function finishEarly() { state.goalDone = true; collapseThread("Add more jobs · skipped"); renderFinal(); runFinalChat(true); }
 
   /* ================= Final: the daily goal, then the handoff ================= */
   const answered = q => q.kind === "chips" ? !!state.answers[q.id] : !!((state.answers[q.id] ?? "").trim());
-  /* Jobs for the keep-going bundle: not sent yet, every extra question already answered (so they are 1-click now), nearest first. */
-  function moreJobs() { return candidates().filter(j => j.extra.every(k => answered(D.questions[k]))).sort(byRank); }
   /* Roles the candidate wanted today but the daily limit pushed to tomorrow: eligible in the ticked options, not sent. */
   function tomorrowQueue() { const ids = sentIds(); return eligible().filter(j => !ids.has(j.id)); }
   function notifyEmail() { return state.notifyEmail || state.email || C.email; }
   function renderFinal(quiet) {
-    const n = state.sent.length, left = Math.max(0, DAILY_GOAL - n);
+    const n = state.sent.length;
     const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    const keepGoing = left > 0 && !state.goalDone && moreJobs().length > 0;
-    if (keepGoing && !state.more) state.more = new Set(moreJobs().slice(0, left).map(j => j.id));
-    const more = keepGoing ? moreJobs().slice(0, left) : [];
-    const onCount = more.filter(j => state.more.has(j.id)).length;
     setStep(4);
     setWork(`
       <div class="black-card"><div class="bc-num">${n}</div><div><div class="bc-title">${plural(n, "application")} sent today</div><div class="bc-sub">${n > 1 ? `West Alamo Dental Care and ${n - 1} more` : "West Alamo Dental Care"} · ${date}</div></div></div>
-      ${keepGoing ? `
-      <section class="goal">
-        <div class="goal-h"><h2>Keep going: <b>${n} of ${DAILY_GOAL}</b> today</h2><span class="goal-n">${left} to go</span></div>
-        <div class="goal-bar"><i style="width:${n / DAILY_GOAL * 100}%"></i></div>
-        <p>${left === 1 ? "One more" : `${left} more`} and you've hit ${DAILY_GOAL}. ${more.length === 1 ? "This one has" : "These have"} no extra questions, I already have every answer.</p>
-        <ul class="more">${more.map(j => jobRow(j, state.more.has(j.id), false)).join("")}</ul>
-        <div class="final-actions"><button class="btn btn-primary" type="button" id="send-more"${onCount ? "" : " disabled"}>Send ${onCount} more ${I.send}</button><button class="btn-text" type="button" id="goal-done">I'm done for today</button></div>
-      </section>` : ""}
+      <section class="find-chat" id="find-chat" aria-label="Search for other roles">
+        <div class="fc-msg"><img src="assets/sonicjobs-mark.svg" alt="CareerGPT"><p>Want to keep going? Tell me what you're looking for and I'll search for other roles, like a different location, hours or title.</p></div>
+        <div class="fc-chips"><button type="button" class="chip" data-fc="Associate dentist roles in Austin">Associate dentist roles in Austin</button><button type="button" class="chip" data-fc="Part-time or weekend roles">Part-time or weekend roles</button><button type="button" class="chip" data-fc="Roles paying $200K or more">Roles paying $200K or more</button></div>
+        <form class="fc-in" id="fc-form" autocomplete="off"><input type="text" id="fc-input" placeholder="Search for other roles…" aria-label="Search for other roles"><button type="submit" class="send" aria-label="Send">${I.send}</button></form>
+      </section>
       <section class="next" id="next">
-        <h2>${n >= DAILY_GOAL ? `Great job, that's ${n} in a day.` : keepGoing ? "What happens next" : `Done for today, ${n} sent.`}</h2>
+        <h2>What happens next</h2>
         <p><b>Employers reply directly</b>, by email or phone, usually within a week. I'll email you the moment one does, and send tomorrow's matches${n >= DAILY_GOAL && tomorrowQueue().length ? ` (starting with the <b>${tomorrowQueue().length}</b> that didn't fit today)` : ""} to:</p>
         <div class="email-row"><span class="val" id="notify-val">${esc(notifyEmail())}</span><button class="btn-text" type="button" id="email-edit">Edit</button></div>
         <div class="email-edit"><input type="email" id="notify-in" value="${esc(notifyEmail())}" aria-label="Email for replies and new matches"><button class="btn btn-primary" type="button" id="email-save">Save</button><button class="btn-text" type="button" id="email-cancel">Cancel</button></div>
-        ${keepGoing ? "" : `<div class="final-actions"><button class="btn btn-secondary" type="button" data-close>Back to LinkedIn</button></div>`}
+        <div class="final-actions"><button class="btn btn-secondary" type="button" data-close>Back to LinkedIn</button></div>
       </section>
       <p class="kicker" style="margin-top:26px">Sent today</p>
       <ul class="sent-grid">${state.sent.map(j => `<li><span class="mono">${mono(j.company)}</span><span><b>${esc(j.company)}</b><small>${esc(j.city)}, ${esc(j.state)}</small></span><span class="st">${I.check}</span></li>`).join("")}</ul>
     `, quiet);
     setCta(""); bindToasts();
-    $$(".goal .job").forEach(row => row.addEventListener("click", () => { const id = row.dataset.job; if (state.more.has(id)) state.more.delete(id); else state.more.add(id); const st = workScroll.scrollTop; renderFinal(true); workScroll.scrollTop = st; }));
-    const sm = $("#send-more"); if (sm) sm.addEventListener("click", () => sendMore("form"));
-    const gd = $("#goal-done"); if (gd) gd.addEventListener("click", () => dismissGoal("form"));
+    const fcGo = t => { toast("Search for other roles (prototype)"); };
+    $$("[data-fc]").forEach(c => c.addEventListener("click", () => fcGo(c.dataset.fc)));
+    $("#fc-form").addEventListener("submit", e => { e.preventDefault(); const i = $("#fc-input"); if (!i.value.trim()) return; fcGo(i.value.trim()); i.value = ""; });
     const nx = $("#next");
     $("#email-edit").addEventListener("click", () => { nx.classList.add("editing"); const i = $("#notify-in"); i.focus(); i.select(); });
     $("#email-cancel").addEventListener("click", () => { nx.classList.remove("editing"); $("#notify-in").value = notifyEmail(); });
@@ -1181,35 +1186,9 @@
     $("#email-save").addEventListener("click", save);
     $("#notify-in").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); save(); } if (e.key === "Escape") $("#email-cancel").click(); });
   }
-  async function sendMore(source) {
-    const jobs = moreJobs().filter(j => state.more.has(j.id));
-    if (!jobs.length) return;
-    if (source === "form" && state.pending.more) state.pending.more.answer("send");
-    const btn = $("#send-more"); if (btn) { btn.disabled = true; btn.innerHTML = "Sending…"; }
-    agent(`Sending ${jobs.length} more.`, { think: 200 });
-    setStatus(`Sending ${jobs.length} more…`, true);
-    await sendBatch(jobs, `Sending ${jobs.length} more`);
-    state.more = null;
-    renderFinal(); runFinalChat();
-  }
-  function dismissGoal(source) {
-    state.goalDone = true;
-    if (source === "form" && state.pending.more) state.pending.more.answer("done");
-    renderFinal(true);
-    if (source === "form") agent(`No problem. Tomorrow's matches go to ${notifyEmail()}, change it on the right if you'd rather use another address.`, { think: 300, status: "Done for today" });
-  }
-  async function runFinalChat(early) {
-    const n = state.sent.length, left = DAILY_GOAL - n, more = moreJobs().slice(0, Math.max(0, left));
-    if (early) { await agent(`No problem. I'll email you when West Alamo replies, and send tomorrow's matches to ${notifyEmail()}. Change it on the right if you'd rather use another address.`, { think: 450, status: "Done for today" }); return; }
-    if (n >= DAILY_GOAL || state.goalDone || !more.length) {
-      const tq = tomorrowQueue().length;
-      await agent(`All ${n} sent. ${n >= DAILY_GOAL ? `Great job, that's ${n} in a day. ` : ""}Tomorrow's matches${n >= DAILY_GOAL && tq ? `, starting with the ${tq} that didn't fit today,` : ""} go to ${notifyEmail()}, change it on the right if you'd rather use another address.`, { think: 450, status: n >= DAILY_GOAL ? `All ${n} sent · great job` : `All ${n} sent` });
-      return;
-    }
-    await agent(`All ${n} sent.`, { think: 400, status: `All ${n} sent` });
-    await ask("more", `You're ${left} away from ${DAILY_GOAL} today. ${more.length === 1 ? "This one has" : `These ${more.length} have`} no extra questions, send ${more.length === 1 ? "it" : "them"}?`, [{ value: "send", label: `Send ${more.length} more` }, { value: "done", label: "I'm done for today" }], {
-      onPick: (o, first) => { if (!first) return; if (o.value === "send") sendMore("chat"); else { dismissGoal("chat"); agent(`No problem. Tomorrow's matches go to ${notifyEmail()}, change it on the right if you'd rather use another address.`, { think: 300, status: "Done for today" }); } }, think: 350, status: `${left} more to hit ${DAILY_GOAL}`,
-    });
+  async function runFinalChat() {
+    const n = state.sent.length;
+    await agent(`All ${n} sent. Employers reply to you directly, and I'll email ${notifyEmail()} the moment one does. Want to keep going? Ask me to search for other roles.`, { think: 450, status: `All ${n} sent` });
   }
 
   /* ================= Composer, notes, entry ================= */

@@ -792,3 +792,15 @@ h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.
 .modal-list { margin: 0 0 8px; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--t2); }
 .modal-list li { margin-bottom: 4px; }
 .modal-card .btn-close { margin-top: 18px; position: sticky; bottom: 0; }
+
+/* Final page: search chat under the banner */
+.find-chat { margin: 14px 0 18px; padding: 16px; border: 1px solid var(--hair); border-radius: var(--radius); background: var(--paper); }
+.fc-msg { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+.fc-msg img { width: 28px; height: 28px; }
+.fc-msg p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink); }
+.fc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.fc-in { display: flex; gap: 8px; align-items: center; border: 1px solid var(--hair2); border-radius: 999px; padding: 6px 6px 6px 16px; background: var(--paper); }
+.fc-in:focus-within { border-color: var(--accent); }
+.fc-in input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: 14px; }
+.fc-in .send { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ink); color: var(--paper); display: grid; place-items: center; cursor: pointer; flex: none; }
+.fc-in .send svg { width: 16px; height: 16px; }
