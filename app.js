@@ -669,7 +669,9 @@
     $("#resume-tag").textContent = "Uploaded";
     $("#resume-tag").classList.remove("accent");
     $("[data-change]").addEventListener("click", openFilePicker);
-    showForm(); $("#sec-summary").hidden = !$("#edit-fields").hidden || !!state.byHand;
+    /* A new candidate sees nothing below the resume while it fills; the summary and remaining questions appear once, at the top, when it is done. */
+    const late = state.identity === "new";
+    if (!late) { showForm(); $("#sec-summary").hidden = !$("#edit-fields").hidden || !!state.byHand; }
     state.filled = true;
     if (state.identity === "returning") state.resumeConfirmed = true;
     renderCta1();
@@ -677,14 +679,17 @@
     for (const [id, v] of seq) {
       const el = $("#" + id); el.value = v;
       el.closest(".f").classList.add("done");
-      renderSummary(); updateProgress();
+      if (!late) renderSummary();
+      updateProgress();
       await wait(120);
     }
     ["backup", "locpref", "relocate"].forEach(k => { if (!state.a[k]) $(`#f-${k}-w`).classList.add("needs"); });
     updateProgress();
     renderSummary();
-    if (state.identity === "new") { collapseIntro(); workScroll.scrollTop = 0; }
-    else $("#sec-pref").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    if (late) {
+      showForm(); $("#sec-summary").hidden = !$("#edit-fields").hidden || !!state.byHand;
+      collapseIntro(); workScroll.scrollTop = 0;
+    } else $("#sec-pref").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
   }
 
   async function onResume(name) {
