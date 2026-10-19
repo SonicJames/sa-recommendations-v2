@@ -935,7 +935,7 @@
         <div class="bc-right">Just now</div>
       </div>
       <div class="s2-rest${intro ? " hold" : ""}" id="s2-rest">
-      <div class="pool-h"><h2>We've found <b>${nMatches}</b> other close ${plural(nMatches, "match", "matches")} to the role you applied to</h2></div>
+      <div class="pool-h"><h2>Keep going! We've found <b>${nMatches}</b> other close ${plural(nMatches, "match", "matches")} to the role you applied to!</h2></div>
       <p class="cap-line">${I.shield}<span>Up to <b>${DAILY_GOAL} applications a day</b>. ${state.sent.length} sent, so up to <b>${capLeft()}</b> here${queued().length && atCap() ? `; the other <b>${queued().length}</b> go out first tomorrow` : ""}.</span></p>
       ${near.map(bundleHtml).join("")}
       ${far.length ? `<button class="btn-text more-opts" type="button" id="more-opts">More options (${far.length}): ${far.slice(0, SHOW).map(b => b.label.split(",")[0]).filter((v, i, a) => a.indexOf(v) === i).join(", ")}</button>` : ""}
