@@ -201,8 +201,8 @@
   const EEO = ["Prefer not to say"];
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const isKnownEmail = e => e.trim().toLowerCase() === D.saved.email.toLowerCase();
-  const sel = (id, opts, value, why, placeholder) => `<div class="f" id="${id}-w"><label for="${id}">${placeholder}${why ? ` <span class="need">Needs you</span><span class="ok">${I.check}</span>` : ""}</label><select id="${id}">${value === "" ? `<option value="">Choose</option>` : ""}${opts.map(o => `<option${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>${why ? `<div class="hint">${esc(why)}</div>` : ""}</div>`;
-  const field = (id, label, why, ph = "") => `<div class="f" id="${id}-w"><label for="${id}">${label} <span class="need">Needs you</span><span class="ok">${I.check}</span></label><input id="${id}" value="" placeholder="${esc(ph)}"><div class="hint">${esc(why)}</div></div>`;
+  const sel = (id, opts, value, why, placeholder) => `<div class="f" id="${id}-w"><label for="${id}">${placeholder}${why ? ` <span class="need">Required</span><span class="ok">${I.check}</span>` : ""}</label><select id="${id}">${value === "" ? `<option value="">Choose</option>` : ""}${opts.map(o => `<option${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>${why ? `<div class="hint">${esc(why)}</div>` : ""}</div>`;
+  const field = (id, label, why, ph = "") => `<div class="f" id="${id}-w"><label for="${id}">${label} <span class="need">Required</span><span class="ok">${I.check}</span></label><input id="${id}" value="" placeholder="${esc(ph)}"><div class="hint">${esc(why)}</div></div>`;
 
   /* v2: nothing of the form shows until it has something to say. After the resume, the answers it covered collapse into a
      summary at the bottom (Edit opens the full form); the questions only the candidate can answer sit above it. */
@@ -247,17 +247,17 @@
       </section>
 
       <section class="sec" id="sec-phone" hidden>
-        <div class="sec-h"><div class="sec-title">Phone number</div><span class="tag accent" id="phone-tag">Needs you</span></div>
-        ${field("f-phone", "Phone", W.phone, "(555) 123-4567")}
+        <div class="sec-h"><div class="sec-title">Phone number</div><span class="tag accent" id="phone-tag">Required</span></div>
+        <div class="f" id="f-phone-w"><input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" value="" placeholder="(555) 123-4567" aria-label="Phone number"><div class="hint">${esc(W.phone)}</div></div>
       </section>
 
       <section class="sec" id="sec-unlock" hidden>
-        <div class="sec-h"><div class="sec-title">${I.shield} Unlock your saved details</div><span class="tag accent" id="unlock-tag">Needs you</span></div>
+        <div class="sec-h"><div class="sec-title">${I.shield} Unlock your saved details</div><span class="tag accent" id="unlock-tag">Required</span></div>
         <div id="unlock-box"></div>
       </section>
 
       <section class="sec" id="sec-resume" hidden>
-        <div class="sec-h"><div class="sec-title">Resume</div><span class="tag accent" id="resume-tag">Start here</span></div>
+        <div class="sec-h"><div class="sec-title">Resume</div><span class="tag accent" id="resume-tag">Required</span></div>
         <div id="resume-box">
           <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload your resume">
             <span class="drop-ic">${I.upload}</span>
@@ -323,14 +323,14 @@
       <div class="sum-act" id="edit-done-row"><button class="btn btn-primary" type="button" id="edit-done">Done editing</button></div>
       </div>
       <section class="sec focus" id="sec-pref">
-        <div class="sec-h"><div class="sec-title">Remaining questions the employer is asking</div><span class="tag accent" id="pref-tag">3 need you</span></div>
+        <div class="sec-h"><div class="sec-title">Remaining questions the employer is asking</div><span class="tag accent" id="pref-tag">3 required</span></div>
         <div class="grid2">
           <div class="span2">${field("f-backup", "Backup email", W.backup, "A secondary email")}</div>
-          <div class="f" id="f-locpref-w"><label for="f-locpref">First location preference <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
+          <div class="f" id="f-locpref-w"><label for="f-locpref">First location preference <span class="need">Required</span><span class="ok">${I.check}</span></label>
             <select id="f-locpref"><option value="">Choose a city</option>${LOC.map(o => `<option value="${o.value}">${o.value}, TX</option>`).join("")}</select>
             <div class="hint">${esc(W.locpref)}</div>
           </div>
-          <div class="f" id="f-relocate-w"><label>Open to relocating anywhere? <span class="need">Needs you</span><span class="ok">${I.check}</span></label>
+          <div class="f" id="f-relocate-w"><label>Open to relocating anywhere? <span class="need">Required</span><span class="ok">${I.check}</span></label>
             <div class="seg" id="f-relocate"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div>
             <div class="hint">${esc(W.relocate)}</div>
           </div>
@@ -602,7 +602,7 @@
     const an = $("#ans-n"); if (an) an.textContent = n;
     const bar = $("#bar-i"); if (bar) bar.style.width = Math.min(100, n / 19 * 100) + "%";
     const left = ["backup", "locpref", "relocate"].filter(k => !state.a[k]).length;
-    const tag = $("#pref-tag"); if (tag) { tag.textContent = left ? `${left} need${left === 1 ? "s" : ""} you` : "Done"; tag.classList.toggle("accent", left > 0); const sp = $("#sec-pref"); if (sp) sp.classList.toggle("focus", left > 0); }
+    const tag = $("#pref-tag"); if (tag) { tag.textContent = left ? `${left} required` : "Done"; tag.classList.toggle("accent", left > 0); const sp = $("#sec-pref"); if (sp) sp.classList.toggle("focus", left > 0); }
     if (state.identity === "new" && state.filled && !state.processing && n < 19) setStatus(`${n} of 19 filled · ${19 - n} to go`);
     if (state.identity === "new" && n >= 19) setStatus("Ready to submit");
     syncSubmit();
@@ -613,7 +613,7 @@
   const phoneOk = () => val("f-phone").replace(/\D/g, "").length >= 10;
   const PHONE_ERR = "Enter the full 10-digit number, including area code.";
   function markPhone() { const w = $("#f-phone-w"); if (!w) return; const bad = !phoneOk() && !!val("f-phone"), show = bad && (!!w.dataset.touched || state.introCollapsed); w.classList.toggle("done", phoneOk()); w.classList.toggle("needs", bad); w.classList.toggle("invalid", show);
-    let err = $("#f-phone-err"); if (!err) { err = document.createElement("div"); err.id = "f-phone-err"; err.className = "err"; err.setAttribute("role", "alert"); err.textContent = PHONE_ERR; w.appendChild(err); } err.hidden = !show; const t = $("#phone-tag"); if (t) { t.textContent = phoneOk() ? "Done" : "Needs you"; t.classList.toggle("accent", !phoneOk()); } }
+    let err = $("#f-phone-err"); if (!err) { err = document.createElement("div"); err.id = "f-phone-err"; err.className = "err"; err.setAttribute("role", "alert"); err.textContent = PHONE_ERR; w.appendChild(err); } err.hidden = !show; const t = $("#phone-tag"); if (t) { t.textContent = phoneOk() ? "Done" : "Required"; t.classList.toggle("accent", !phoneOk()); } }
 
   /* Backup email must be a valid address and differ from the main email (case-insensitive). */
   const BACKUP_ERR = "Backup email must be different from your main email.";
@@ -716,11 +716,11 @@
       <li>${I.check}<span><b>Voluntary questions</b> set to "Prefer not to say"</span></li>
     </ul>`;
     await agent(`Done. I filled 11 of 19 answers from your resume and set the 4 voluntary ones to "Prefer not to say". 3 aren't on a resume, so they need you.`, { until: done, thinkLabel: "Reading your resume…", meta: "Read your resume in 6s", card });
-    const be = await ask("backup", "First: West Alamo asks for a backup email in case your main one is already registered with them. Your resume also lists " + C.backupEmail + ". Use that?", [{ value: C.backupEmail, label: "Use " + C.backupEmail }, { value: "other", label: "Type a different one" }], { onPick: o => o.value === "other" ? focusField("f-backup") : setAnswer("backup", o.value, "chat"), think: 400, status: "Backup email needs you" });
+    const be = await ask("backup", "First: West Alamo asks for a backup email in case your main one is already registered with them. Your resume also lists " + C.backupEmail + ". Use that?", [{ value: C.backupEmail, label: "Use " + C.backupEmail }, { value: "other", label: "Type a different one" }], { onPick: o => o.value === "other" ? focusField("f-backup") : setAnswer("backup", o.value, "chat"), think: 400, status: "Backup email required" });
     if (be.value === "other") await agent("Sure, it's highlighted in the form.", { think: 300 });
-    const loc = await ask("locpref", "West Alamo asks for a first location preference. The job's in San Antonio and your resume says San Francisco. What should I put?", LOC, { onPick: o => setAnswer("locpref", o.value, "chat"), think: 400, status: "Location needs you" });
+    const loc = await ask("locpref", "West Alamo asks for a first location preference. The job's in San Antonio and your resume says San Francisco. What should I put?", LOC, { onPick: o => setAnswer("locpref", o.value, "chat"), think: 400, status: "Location required" });
     await agent(`Done, ${loc.value} it is.`, { think: 300 });
-    const rel = await ask("relocate", "And are you open to relocating anywhere?", [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }], { onPick: o => setAnswer("relocate", o.value, "chat"), think: 300, status: "Relocation needs you" });
+    const rel = await ask("relocate", "And are you open to relocating anywhere?", [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }], { onPick: o => setAnswer("relocate", o.value, "chat"), think: 300, status: "Relocation required" });
     await agent(rel.value === "yes" ? "Noted, I've put Yes." : "Noted, I've put No.", { think: 300 });
     await agent("The voluntary questions (gender, race, disability, veteran status) are optional and only used for the employer's equal-opportunity reporting. I never guess them.", { think: 400, links: [{ label: "Open them if you'd like to answer", onClick: openEeo }] });
     await agent("Everything's ready. Submit when it looks right to you.", { think: 400, status: "Ready to submit" });
@@ -1241,7 +1241,7 @@
       "Say where the replies go", "The email address is shown and editable here, where it matters, instead of buried in settings.",
       "Strong ending", "One black card with the number, then tomorrow's matches as the reason to come back."],
     5: ["It starts in the LinkedIn app", "On a phone the job is the LinkedIn app's job page: company, title, the On-site and Full-time pills, Apply beside Save, and the sticky Apply bar once you scroll. Apply opens SonicApply full screen, the way LinkedIn's in-app browser would. The flow is judged from where it really starts.",
-      "The form is the page, and the only page", "No chat on a phone. Every job the chat does on desktop has a better home here: the processing card narrates, the fields ask with Needs you pills and why-text, the why line explains the match, the cards nudge. A chat would only compete for space.",
+      "The form is the page, and the only page", "No chat on a phone. Every job the chat does on desktop has a better home here: the processing card narrates, the fields ask with Required pills and why-text, the why line explains the match, the cards nudge. A chat would only compete for space.",
       "The agent lives in the action bar", "The SonicJobs mark and a word or two from CareerGPT sit above the button: Reading your resume, 16 of 19 filled, Backup email needs you, Ready to submit. One bar holds state and action, the way good mobile checkouts do, and it never changes height.",
       "Nothing moves unless you move it", "No auto-scrolling while the form fills, no entrance animation on a tap. A still page reads as a trustworthy one.",
       "Code by text first", "The phone is already in hand and SMS codes autofill on it. Email is one tap away, never a second screen."],
