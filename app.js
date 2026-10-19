@@ -897,11 +897,12 @@
   }
 
   const placeText = j => j.city === "San Antonio" ? "San Antonio · same city as the job" : j.state === "TX" ? `${j.city}, TX · ${j.miles} mi away` : `${j.city}, ${j.state}`;
+  const postedDate = (j, long) => { const d = new Date(Date.now() - (j.postedDays || 0) * 864e5); return d.toLocaleDateString("en-US", long ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" }); };
   const practiceText = j => j.practice === "private" ? "Private practice" : "Group practice";
   const qText = j => { const n = leftQ(j).length; return n ? (tierOf(j) === "long" ? `Longer form · ${n} extra ${plural(n, "question")}` : `${n} extra ${plural(n, "question")}${n < j.extra.length ? ` · ${j.extra.length - n} reused` : ""}`) : "No extra questions"; };
   const jobRow = (j, on, showQ, tag) => `<div class="job${!on ? " off" : ""}${tag ? " queued" : ""}" data-job="${j.id}">
         <div class="mono">${mono(j.company)}</div>
-        <div><div class="jt">${esc(j.title)} · ${esc(j.company)}</div><div class="jm">${esc(placeText(j))} · ${practiceText(j)}${j.shift !== FT ? " · " + esc(j.shift) : ""}${j.pay ? " · " + esc(j.pay) : ""}${j.early ? ' · <span class="early">Early applicant</span>' : ""}</div>${showQ ? `<div class="jq${leftQ(j).length ? "" : " ready"}">${qText(j)}</div>` : ""}</div>
+        <div><div class="jt">${esc(j.title)} · ${esc(j.company)}</div><div class="jm">${esc(placeText(j))} · ${practiceText(j)}${j.shift !== FT ? " · " + esc(j.shift) : ""}${j.pay ? " · " + esc(j.pay) : ""} · Posted ${postedDate(j)}${j.early ? ' · <span class="early">Early applicant</span>' : ""}</div>${showQ ? `<div class="jq${leftQ(j).length ? "" : " ready"}">${qText(j)}</div>` : ""}</div>
         <span class="job-r"><button type="button" class="btn-details" data-details="${j.id}">View details</button>${tag ? `<span class="tmrw">${esc(tag)}</span>` : ""}<span class="cb${on ? " on" : ""}">${I.check}</span></span>
       </div>`;
 
@@ -912,10 +913,10 @@
     return `<section class="bundle${on ? " on" : ""}${b.id === "exact" ? " exact" : ""}" data-bundle="${b.id}">
       <div class="bundle-h" data-bundle-toggle="${b.id}">
         <span class="cb${on ? (sel === b.jobs.filter(j => tierOf(j) !== "long").length || sel === b.jobs.length ? " on" : " mixed") : ""}">${I.check}</span>
-        <div class="bundle-t"><div class="bundle-title">${esc(b.name)}${b.id === "exact" ? '<span class="tag pick">Top pick</span>' : ""}</div>
+        <div class="bundle-t"><div class="bundle-title">${esc(b.name)}</div>
           <div class="bundle-count">${b.jobs.length} ${plural(b.jobs.length, "role")}${on ? `, ${sel} selected` : ""}</div></div>
         ${on ? "" : `<span class="bundle-n">${I.plus} Add</span>`}
-        <div class="bundle-why">${esc(b.why)}${b.changes.length ? " · " : ""}${b.changes.map(c => `<span class="chg">${esc(c)}</span>`).join(" ")}</div>
+        <div class="bundle-why">${b.id === "exact" ? '<span class="tag pick">Top pick</span> ' : ""}${esc(b.why)}${b.changes.length ? " · " : ""}${b.changes.map(c => `<span class="chg">${esc(c)}</span>`).join(" ")}</div>
       </div>
       ${on ? `<div class="bundle-jobs">${b.jobs.map(j => { const s = state.selected.has(j.id); return jobRow(j, s, true, !s && capped && tierOf(j) !== "long" ? "Tomorrow" : ""); }).join("")}</div>` : ""}
     </section>`;
@@ -934,7 +935,7 @@
         <div class="bc-right">Just now</div>
       </div>
       <div class="s2-rest${intro ? " hold" : ""}" id="s2-rest">
-      <div class="pool-h"><h2>We've sent your application, but we've found <b>${nMatches}</b> other close ${plural(nMatches, "match", "matches")} to the role you applied to</h2></div>
+      <div class="pool-h"><h2>We've found <b>${nMatches}</b> other close ${plural(nMatches, "match", "matches")} to the role you applied to</h2></div>
       <p class="cap-line">${I.shield}<span>Up to <b>${DAILY_GOAL} applications a day</b>. ${state.sent.length} sent, so up to <b>${capLeft()}</b> here${queued().length && atCap() ? `; the other <b>${queued().length}</b> go out first tomorrow` : ""}.</span></p>
       ${near.map(bundleHtml).join("")}
       ${far.length ? `<button class="btn-text more-opts" type="button" id="more-opts">More options (${far.length}): ${far.slice(0, SHOW).map(b => b.label.split(",")[0]).filter((v, i, a) => a.indexOf(v) === i).join(", ")}</button>` : ""}
@@ -1258,7 +1259,7 @@
   function openDetails(id, trigger) {
     const j = D.jobs.find(x => x.id === id); if (!j) return;
     closeDetails(); detailsReturn = trigger || null;
-    const rows = [["Location", placeText(j)], ["Practice", practiceText(j)], ["Hours", j.shift], ["Pay", j.pay], ["Posted", j.postedDays === 0 ? "Today" : `${j.postedDays} ${plural(j.postedDays, "day")} ago`], ["Application", qText(j)]].filter(r => r[1]);
+    const rows = [["Location", placeText(j)], ["Practice", practiceText(j)], ["Hours", j.shift], ["Pay", j.pay], ["Posted", `${postedDate(j, true)}${j.postedDays === 0 ? " (today)" : ` (${j.postedDays} ${plural(j.postedDays, "day")} ago)`}`], ["Application", qText(j)]].filter(r => r[1]);
     const lead = /Lead|Director/.test(j.title), senior = /Senior/.test(j.title), assoc = /Associate/.test(j.title);
     const part = j.shift !== FT;
     const who = j.practice === "private" ? "a locally owned private practice" : "a group practice with shared support teams";
