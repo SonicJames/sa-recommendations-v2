@@ -188,14 +188,14 @@
   const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   let shownSteps = 1;
   function renderProgress(n) {
-    const steps = [n > 1 ? "Application sent" : "Your application", "Choose more jobs", "Confirm and send"];
-    const count = n > 1 ? 3 : 1, fresh = count > shownSteps;
+    const steps = [n > 1 ? "Application sent" : "Your application", "Choose more jobs", "Confirm and send", "Done"];
+    const count = n > 1 ? 4 : 1, fresh = count > shownSteps;
     const items = steps.slice(0, count).map((label, i) => {
-      const done = i + 1 < n || n === 4, cur = i + 1 === n;
+      const done = i + 1 < n || n === 4, cur = i + 1 === n || (n === 4 && i === 3);
       const isNew = fresh && i >= shownSteps;
       return `${i ? `<li class="step-line${i < n ? " is-done" : ""}${isNew ? " reveal" : ""}" aria-hidden="true"></li>` : ""}<li class="step${done ? " is-done" : ""}${cur ? " is-current" : ""}${isNew ? " reveal" : ""}"${cur ? ' aria-current="step"' : ""}><span class="step-dot"><span>${i + 1}</span>${CHECK}</span><span class="step-label">${label}</span></li>`;
     }).join("");
-    $("#progress").innerHTML = `<ol>${items}</ol>`;
+    $("#progress").innerHTML = `<div class="pg-count">Step ${n} of 4</div><ol>${items}</ol>`;
     shownSteps = count;
   }
   function setStep(n) {
