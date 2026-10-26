@@ -257,7 +257,7 @@ body.is-busy .composer .send .ic-stop { display: block; }
 .f .hint .chips.mini .chip.on { color: #fff; }
 
 /* ---------- Workspace ---------- */
-.work { display: flex; flex-direction: column; min-height: 0; background: var(--paper); position: relative; }
+.work { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--paper); position: relative; }
 .work-scroll { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--hair2) transparent; }
 .work-scroll::-webkit-scrollbar { width: 8px; }
 .work-scroll::-webkit-scrollbar-thumb { background: var(--hair2); border-radius: 8px; }
@@ -737,7 +737,8 @@ h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.
   .cta-meta > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cta-actions { justify-content: flex-end; }
   .cta-actions .btn-primary { flex: 1; }
-  .cta-actions .btn-ghost { padding: 0 6px; font-size: 14px; }
+  .cta-actions .btn-ghost { padding: 0 6px; font-size: 14px; white-space: normal; text-align: left; line-height: 1.2; min-width: 0; max-width: 42%; }
+  .cta-actions .btn-primary { min-width: 0; padding: 0 14px; }
   .pref-row { grid-template-columns: 1fr; gap: 6px; }
   .pool-h { flex-direction: column; align-items: flex-start; gap: 6px; }
   .notes { width: 100vw; }
@@ -805,3 +806,9 @@ h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.
 .fc-in .send { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ink); color: var(--paper); display: grid; place-items: center; cursor: pointer; flex: none; }
 .fc-in .send svg { width: 16px; height: 16px; }
 .bundle-why .tag { font-size: 11px; padding: 2px 8px; margin-right: 4px; vertical-align: 1px; }
+
+/* Progress bar above the form: sticky, never scrolls with the content */
+.progress { padding: 12px 56px; border-bottom: 1px solid var(--hair); background: var(--paper); }
+.progress .reveal { animation: fade .45s ease both; }
+@media (max-width: 1100px) { .progress { padding: 12px 32px; } }
+@media (max-width: 920px) { .progress { padding: 10px 16px; } }

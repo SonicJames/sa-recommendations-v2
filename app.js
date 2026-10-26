@@ -184,10 +184,23 @@
   const cta = $("#cta");
   function setWork(html, quiet) { work.innerHTML = html; if (!quiet) { work.classList.remove("swap"); void work.offsetWidth; work.classList.add("swap"); workScroll.scrollTop = 0; } }
   function setCta(html) { cta.innerHTML = html ? agentLineHtml() + html : ""; cta.style.display = html ? "" : "none"; bindToasts(); }
+  /* Progress: step 1 is the application on its own. Once it is sent the bar acknowledges that (Application sent, ticked) and introduces the two steps for the extra jobs. */
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  let shownSteps = 1;
+  function renderProgress(n) {
+    const steps = [n > 1 ? "Application sent" : "Your application", "Choose more jobs", "Confirm and send"];
+    const count = n > 1 ? 3 : 1, fresh = count > shownSteps;
+    const items = steps.slice(0, count).map((label, i) => {
+      const done = i + 1 < n || n === 4, cur = i + 1 === n;
+      const isNew = fresh && i >= shownSteps;
+      return `${i ? `<li class="step-line${i < n ? " is-done" : ""}${isNew ? " reveal" : ""}" aria-hidden="true"></li>` : ""}<li class="step${done ? " is-done" : ""}${cur ? " is-current" : ""}${isNew ? " reveal" : ""}"${cur ? ' aria-current="step"' : ""}><span class="step-dot"><span>${i + 1}</span>${CHECK}</span><span class="step-label">${label}</span></li>`;
+    }).join("");
+    $("#progress").innerHTML = `<ol>${items}</ol>`;
+    shownSteps = count;
+  }
   function setStep(n) {
     state.step = n;
-    $$(".step").forEach((s, i) => { s.classList.toggle("is-done", i + 1 < n); s.classList.toggle("is-current", i + 1 === n); });
-    $$(".step-line").forEach((l, i) => l.classList.toggle("is-done", i + 1 < n));
+    renderProgress(n);
     $$(".note-step").forEach(ns => ns.classList.toggle("is-current", ns.dataset.step === String(n)));
   }
   function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2200); }
