@@ -4,6 +4,8 @@
   const C = D.candidate;
   const W = D.why;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* Variant of the recommendations page: ?v=match ranks every role by an AI match % instead of grouping by relaxed criteria. */
+  const MATCH = /[?&](v|variant)=match\b/.test(location.search);
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -834,8 +836,44 @@
     { id: "lead-us", label: "Lead Dentist or Dental Director, other states", why: "A leadership title, open to relocating", changes: ["Role: leadership", "Location: anywhere in the US"], test: j => LEAD.includes(j.title) && j.area === "us" && j.shift === FT, dist: () => 3.5 },
     { id: "shift-us", label: "Part-time or weekend dentist roles, other states", why: "Different hours, open to relocating", changes: ["Hours: part-time or weekends", "Location: anywhere in the US"], test: j => j.shift !== FT && j.area === "us", dist: () => 3.8 },
   ];
+  /* AI match (variant): each open role is scored against the candidate's resume, location and pay. Prototype scoring is
+     deterministic: weighted fit on role, location, pay, hours and practice type, stretched to a spread of 45 to 98%. */
+  const TITLE_FIT = { "General Dentist": 100, "Associate Dentist": 94, "Senior Dentist": 82, "Lead Dentist": 72, "Dental Director": 64 };
+  const hashId = id => { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+  function matchFactors(j) {
+    const role = TITLE_FIT[j.title] ?? 60;
+    const loc = j.area === "sa" ? (j.miles <= 15 ? 100 : 92) : j.area === "tx" ? Math.max(45, Math.round(90 - (j.miles || 200) / 5)) : (relocating() ? 58 : 30);
+    const pay = j.salaryMin == null ? 60 : j.salaryMin >= 205 ? 100 : j.salaryMin >= 190 ? 92 : j.salaryMin >= 180 ? 84 : 70;
+    const hours = j.shift === FT ? 100 : 55;
+    const practice = j.practice === "private" ? 92 : 82;
+    return { role, loc, pay, hours, practice };
+  }
+  function matchScore(j) {
+    const f = matchFactors(j), raw = f.role * .32 + f.loc * .28 + f.pay * .2 + f.hours * .12 + f.practice * .04 + (j.early ? 4 : 0);
+    return Math.max(45, Math.min(98, Math.round(100 - (100 - raw) * 1.3 + (hashId(j.id) % 5) - 2)));
+  }
+  function matchReasons(j) {
+    const f = matchFactors(j), out = [];
+    out.push(j.title === A.title ? "Same role" : j.title === C.title ? "Matches your title" : /Senior/.test(j.title) ? "A step up" : "Leadership role");
+    out.push(j.area === "sa" ? "Same city" : j.area === "tx" ? `${j.miles} mi away` : "Relocation needed");
+    if (j.salaryMin) out.push(`$${j.salaryMin}K+`);
+    if (f.hours === 100) out.push("Full-time");
+    return out.slice(0, 3);
+  }
+  const MATCH_BANDS = [
+    { id: "m-strong", min: 85, name: "Strong matches · 85%+", why: "Role, location and pay all line up with your profile", dist: () => 0 },
+    { id: "m-good", min: 70, name: "Good matches · 70 to 84%", why: "A strong fit on most things, with one trade-off", dist: () => 2 },
+    { id: "m-possible", min: 0, name: "Possible matches · under 70%", why: "A partial fit, worth a look if you're flexible", dist: () => 3 },
+  ];
+  function matchBands() {
+    const out = MATCH_BANDS.map(b => ({ ...b, label: b.name, changes: [], jobs: [] }));
+    candidates().forEach(j => { const sc = matchScore(j), b = out.find(x => sc >= x.min); if (b) b.jobs.push(j); });
+    out.forEach(b => b.jobs.sort(byRank));
+    return out.filter(b => b.jobs.length);
+  }
   /* bundles(): every candidate role lands in the first option it matches, so counts never double up. */
-  function bundles() {
+  function bundles() { return MATCH ? matchBands() : roleBundles(); }
+  function roleBundles() {
     const left = candidates().filter(passesPay);
     const out = BUNDLE_DEFS.map(b => ({ ...b, jobs: [] }));
     left.forEach(j => { const b = out.find(x => x.test(j)); if (b) b.jobs.push(j); });
@@ -868,7 +906,7 @@
   const DAILY_GOAL = 10;
   const capLeft = () => Math.max(0, DAILY_GOAL - state.sent.length);
   const rankJob = j => (tierOf(j) === "ready" ? 0 : 1) * 10000 + (j.area === "sa" ? 0 : j.area === "tx" ? 1 : 2) * 1000 + (j.miles ?? 999) - (j.early ? 5 : 0);
-  const byRank = (a, b) => rankJob(a) - rankJob(b);
+  const byRank = (a, b) => MATCH ? matchScore(b) - matchScore(a) : rankJob(a) - rankJob(b);
   const eligible = () => pool().filter(j => tierOf(j) !== "long").sort(byRank);
   const queued = () => eligible().filter(j => !state.selected.has(j.id));
   const atCap = () => state.selected.size >= capLeft();
@@ -919,7 +957,7 @@
   const qText = j => { const n = leftQ(j).length; return n ? (tierOf(j) === "long" ? `Longer form · ${n} extra ${plural(n, "question")}` : `${n} extra ${plural(n, "question")}${n < j.extra.length ? ` · ${j.extra.length - n} reused` : ""}`) : "No extra questions"; };
   const jobRow = (j, on, showQ, tag) => `<div class="job${!on ? " off" : ""}${tag ? " queued" : ""}" data-job="${j.id}">
         <div class="mono">${mono(j.company)}</div>
-        <div><div class="jt">${esc(j.title)} · ${esc(j.company)}</div><div class="jm">${esc(placeText(j))} · ${practiceText(j)}${j.shift !== FT ? " · " + esc(j.shift) : ""}${j.pay ? " · " + esc(j.pay) : ""} · Posted ${postedDate(j)}${j.early ? ' · <span class="early">Early applicant</span>' : ""}</div>${showQ ? `<div class="jq${leftQ(j).length ? "" : " ready"}">${qText(j)}</div>` : ""}</div>
+        <div><div class="jt">${esc(j.title)} · ${esc(j.company)}</div>${MATCH ? `<div class="jmatch"><b class="match ${matchScore(j) >= 85 ? "hi" : matchScore(j) >= 70 ? "mid" : "lo"}">${matchScore(j)}% match</b><span>${matchReasons(j).map(esc).join(" · ")}</span></div>` : ""}<div class="jm">${esc(placeText(j))} · ${practiceText(j)}${j.shift !== FT ? " · " + esc(j.shift) : ""}${j.pay ? " · " + esc(j.pay) : ""} · Posted ${postedDate(j)}${j.early ? ' · <span class="early">Early applicant</span>' : ""}</div>${showQ ? `<div class="jq${leftQ(j).length ? "" : " ready"}">${qText(j)}</div>` : ""}</div>
         <span class="job-r"><button type="button" class="btn-details" data-details="${j.id}">View details</button>${tag ? `<span class="tmrw">${esc(tag)}</span>` : ""}<span class="cb${on ? " on" : ""}">${I.check}</span></span>
       </div>`;
 
@@ -943,7 +981,7 @@
   function renderStep2(rerender, quiet, intro) {
     const bs = bundles(), exact = bs.find(b => b.id === "exact"), hidden = hiddenSameEmployer();
     const near = visibleBundles(), far = hiddenBundles();
-    const nMatches = near.reduce((n, b) => n + b.jobs.length, 0);
+    const nMatches = MATCH ? bs.filter(b => b.min >= 70).reduce((n, b) => n + b.jobs.length, 0) : near.reduce((n, b) => n + b.jobs.length, 0);
     const st = workScroll.scrollTop;
     setWork(`
       <div class="black-card sent-banner" role="status">
@@ -952,7 +990,8 @@
         <div class="bc-right">Just now</div>
       </div>
       <div class="s2-rest${intro ? " hold" : ""}" id="s2-rest">
-      <div class="pool-h"><h2>Keep going! We've found <b>${nMatches}</b> other close ${plural(nMatches, "match", "matches")} to the role you applied to!</h2></div>
+      <div class="pool-h"><h2>${MATCH ? `Keep going! We've found <b>${nMatches}</b> ${plural(nMatches, "job")} that ${nMatches === 1 ? "is" : "are"} a strong or good match for you!` : `Keep going! We've found <b>${nMatches}</b> other close ${plural(nMatches, "match", "matches")} to the role you applied to!`}</h2></div>
+      ${MATCH ? `<p class="why-line">${I.sparkle}<span>Match % is how closely each job fits your resume, location and pay. Highest first.</span></p>` : ""}
       <p class="cap-line">${I.shield}<span>Up to <b>${DAILY_GOAL} applications a day</b>. ${state.sent.length} sent, so up to <b>${capLeft()}</b> here${queued().length && atCap() ? `; the other <b>${queued().length}</b> go out first tomorrow` : ""}.</span></p>
       ${near.map(bundleHtml).join("")}
       ${far.length ? `<button class="btn-text more-opts" type="button" id="more-opts">More options (${far.length}): ${far.slice(0, SHOW).map(b => b.label.split(",")[0]).filter((v, i, a) => a.indexOf(v) === i).join(", ")}</button>` : ""}
@@ -980,7 +1019,7 @@
     const sel = selectedJobs(), qs = unionQuestions(sel).filter(q => !answered(q)), nOpt = state.bundlesOn.size;
     const mins = qs.length ? Math.max(1, Math.round(qs.length * 0.4)) : 0;
     const meta = sel.length === 0 ? "Add an option or select a role to continue" : `<b>${sel.length}</b> selected${atCap() ? " · today's max" : ""} · ${qs.length ? `${qs.length} extra ${plural(qs.length, "question")} · about ${mins} min` : "no extra questions"}`;
-    if (state.step2Ready) setStatus(sel.length ? `${sel.length} selected · ${nOpt} ${plural(nOpt, "option")}${atCap() ? " · today's max" : ""}` : "Add an option to continue");
+    if (state.step2Ready) setStatus(sel.length ? `${sel.length} selected · ${nOpt} ${plural(nOpt, MATCH ? "group" : "option")}${atCap() ? " · today's max" : ""}` : "Add an option to continue");
     setCta(`<div class="cta-in"><div class="cta-meta"><span>${meta}</span></div>
       <div class="cta-actions"><button class="btn btn-ghost" type="button" id="done-early">Search for other roles</button><button class="btn btn-primary" type="button" id="continue2"${sel.length === 0 ? " disabled" : ""}>${sel.length ? `Apply to ${sel.length} more ${plural(sel.length, "job")}` : "Continue"} ${I.arrow}</button></div></div>`);
     $("#continue2").addEventListener("click", goStep3);
@@ -991,8 +1030,13 @@
     const bs = bundles(), exact = bs.find(b => b.id === "exact"), total = candidates().length, boost = bankBoost(candidates());
     const row = multiRow(bs.map(b => ({ value: b.id, label: b.name, count: b.jobs.length, on: state.bundlesOn.has(b.id) })), (o, on) => { if (on !== state.bundlesOn.has(o.value)) toggleBundle(o.value, "chat"); });
     state.bundleRow = row;
-    const onNames = bs.filter(b => state.bundlesOn.has(b.id)).map(b => b.id === "exact" ? `the ${b.jobs.length} in San Antonio` : b.name);
-    await agent(`${exact ? `Only ${exact.jobs.length} other ${A.title} ${plural(exact.jobs.length, "opening")} in the San Antonio area right now, selected: same role, different employer.` : `No other ${A.title} openings in the San Antonio area right now.`} Here's what else could work, closest first. I've also selected ${onNames.filter((_, i) => i > 0).join(" and ") || "nothing else yet"}, ${state.selected.size} roles in all${boost ? `, ${boost} of them with no extra questions thanks to answers from your last application` : ""}. Add or remove any:`, { think: 1400, thinkLabel: "Searching roles…", meta: `Searched ${total} roles in 2s`, chips: row, links: hiddenBundles().length ? [{ label: "More options", onClick: () => showMoreBundles("chat") }] : null, status: `${state.selected.size} selected · ${state.bundlesOn.size} options` });
+    if (MATCH) {
+      const top = bs.find(b => b.min === 85);
+      await agent(`I scored ${total} open roles against your resume, location and pay. ${top ? `${top.jobs.length} ${plural(top.jobs.length, "role")} ${top.jobs.length === 1 ? "is" : "are"} 85% or higher, and I've selected ${top.jobs.length === 1 ? "it" : "them"}` : "None are 85% or higher"}. Add or remove any group:`, { think: 1400, thinkLabel: "Scoring roles…", meta: `Scored ${total} roles in 2s`, chips: row, status: `${state.selected.size} selected · ${state.bundlesOn.size} ${plural(state.bundlesOn.size, "group")}` });
+    } else {
+      const onNames = bs.filter(b => state.bundlesOn.has(b.id)).map(b => b.id === "exact" ? `the ${b.jobs.length} in San Antonio` : b.name);
+      await agent(`${exact ? `Only ${exact.jobs.length} other ${A.title} ${plural(exact.jobs.length, "opening")} in the San Antonio area right now, selected: same role, different employer.` : `No other ${A.title} openings in the San Antonio area right now.`} Here's what else could work, closest first. I've also selected ${onNames.filter((_, i) => i > 0).join(" and ") || "nothing else yet"}, ${state.selected.size} roles in all${boost ? `, ${boost} of them with no extra questions thanks to answers from your last application` : ""}. Add or remove any:`, { think: 1400, thinkLabel: "Searching roles…", meta: `Searched ${total} roles in 2s`, chips: row, links: hiddenBundles().length ? [{ label: "More options", onClick: () => showMoreBundles("chat") }] : null, status: `${state.selected.size} selected · ${state.bundlesOn.size} options` });
+    }
     syncBundleChips();
     state.step2Ready = true;
     await agent(step2Summary(), { think: 500, status: `${state.selected.size} selected · review and continue` });
@@ -1002,8 +1046,8 @@
     const p = pool(), g = groupsFor(selectedJobs()), k = unionQuestions(g.quick).filter(x => !answered(x)).length, q = queued().length, nOpt = state.bundlesOn.size;
     const mix = `${g.ready.length} with no extra questions${g.quick.length ? `, ${g.quick.length} with ${k} short ${plural(k, "answer")}` : ""}`;
     return q && atCap()
-      ? `${state.selected.size} selected across ${nOpt} ${plural(nOpt, "option")}: ${mix}. That's today's max of ${DAILY_GOAL} with West Alamo; the other ${q} go out first tomorrow.`
-      : `${state.selected.size} selected across ${nOpt} ${plural(nOpt, "option")}: ${mix}. ${capLeft() - state.selected.size} ${plural(capLeft() - state.selected.size, "slot")} left today, so add another option if any fits, or continue.`;
+      ? `${state.selected.size} selected across ${nOpt} ${plural(nOpt, MATCH ? "group" : "option")}: ${mix}. That's today's max of ${DAILY_GOAL} with West Alamo; the other ${q} go out first tomorrow.`
+      : `${state.selected.size} selected across ${nOpt} ${plural(nOpt, MATCH ? "group" : "option")}: ${mix}. ${capLeft() - state.selected.size} ${plural(capLeft() - state.selected.size, "slot")} left today, so add another option if any fits, or continue.`;
   }
 
   /* ================= STEP 3: confirm and send ================= */
@@ -1265,6 +1309,9 @@
       "Code by text first", "The phone is already in hand and SMS codes autofill on it. Email is one tap away, never a second screen."],
   };
   $("#notes-body").innerHTML = [1, 2, 3, 4, 5].map(s => `<div class="note-step" data-step="${s}"><p class="kicker">${s < 4 ? `Step ${s} · ${["Apply", "Add more jobs", "Confirm and send"][s - 1]}` : s === 4 ? "After sending" : "On a phone"}</p>${NOTES[s].reduce((acc, v, i, arr) => i % 2 === 0 ? acc + `<div class="note"><span class="num">${i / 2 + 1}</span><div><b>${esc(v)}.</b> ${esc(arr[i + 1])}</div></div>` : acc, "")}</div>`).join("");
+  /* Variant switch for facilitators: reloads with or without ?v=match. */
+  const vsw = $("#variant-switch");
+  if (vsw) { vsw.innerHTML = `Recommendations: <button type="button" class="btn-text" data-variant="role"${MATCH ? "" : " disabled"}>Same role</button> · <button type="button" class="btn-text" data-variant="match"${MATCH ? " disabled" : ""}>AI match %</button>`; vsw.addEventListener("click", e => { const b = e.target.closest("[data-variant]"); if (b && !b.disabled) location.href = location.pathname + (b.dataset.variant === "match" ? "?v=match" : ""); }); }
   $("#notes-btn").addEventListener("click", e => { e.preventDefault(); $("#notes").classList.toggle("open"); });
   $("#notes-close").addEventListener("click", () => $("#notes").classList.remove("open"));
   $("#restart").addEventListener("click", () => location.reload());
@@ -1307,6 +1354,7 @@
     m.id = "job-details"; m.className = "modal"; m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true"); m.setAttribute("aria-labelledby", "jd-title");
     m.innerHTML = `<div class="modal-card"><div class="modal-h"><div class="mono">${esc(mono(j.company))}</div><div><h3 id="jd-title">${esc(j.title)}</h3><div class="jm">${esc(j.company)}</div></div></div>
       <dl class="modal-rows">${rows.map(r => `<dt>${r[0]}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>
+      ${MATCH ? (() => { const f = matchFactors(j), sc = matchScore(j); return `<h4>Why it's a ${sc}% match</h4><ul class="match-bars">${[["Role fit", f.role], ["Location", f.loc], ["Pay", f.pay], ["Hours", f.hours], ["Practice type", f.practice]].map(([k, v]) => `<li><span>${k}</span><i><b style="width:${v}%"></b></i><em>${v}%</em></li>`).join("")}</ul><p>Scored against your resume (${esc(C.title)}, DDS ${esc(C.gradYear)}), your location preference and the pay on this post.</p>`; })() : ""}
       ${j.early ? '<p class="modal-note">Early applicant: this role was posted recently, so applying now puts you near the front.</p>' : ""}
       <h4>About the role</h4>
       <p>${esc(j.company)} is hiring a ${esc(j.title.toLowerCase())} for its ${esc(j.city)} office. This is a ${part ? esc(j.shift.toLowerCase()) : "full-time"}, on-site position at ${who}. You will see a steady schedule of patients, with the time and equipment to practise the way you were trained.</p>
