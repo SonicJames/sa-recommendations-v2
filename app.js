@@ -184,23 +184,26 @@
   const cta = $("#cta");
   function setWork(html, quiet) { work.innerHTML = html; if (!quiet) { work.classList.remove("swap"); void work.offsetWidth; work.classList.add("swap"); workScroll.scrollTop = 0; } }
   function setCta(html) { cta.innerHTML = html ? agentLineHtml() + html : ""; cta.style.display = html ? "" : "none"; bindToasts(); }
-  /* Progress: step 1 is the application on its own. Once it is sent the bar acknowledges that (Application sent, ticked) and introduces the two steps for the extra jobs. */
+  /* Progress: two short runs of three steps. The application runs Your details > Questions > Sent; once it is sent the bar
+     resets for the extra jobs: Recommendations > Questions > Sent. idx 4 means the run is complete (all ticked). */
   const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-  let shownSteps = 1;
-  function renderProgress(n) {
-    const steps = [n > 1 ? "Application sent" : "Your application", "Choose more jobs", "Confirm and send", "Done"];
-    const count = n > 1 ? 4 : 1, fresh = count > shownSteps;
-    const items = steps.slice(0, count).map((label, i) => {
-      const done = i + 1 < n || n === 4, cur = i + 1 === n || (n === 4 && i === 3);
-      const isNew = fresh && i >= shownSteps;
-      return `${i ? `<li class="step-line${i < n ? " is-done" : ""}${isNew ? " reveal" : ""}" aria-hidden="true"></li>` : ""}<li class="step${done ? " is-done" : ""}${cur ? " is-current" : ""}${isNew ? " reveal" : ""}"${cur ? ' aria-current="step"' : ""}><span class="step-dot"><span>${i + 1}</span>${CHECK}</span><span class="step-label">${label}</span></li>`;
+  const RUNS = { 1: { name: "Your application", steps: ["Your details", "Questions", "Sent"] }, 2: { name: "More jobs", steps: ["Recommendations", "Questions", "Sent"] } };
+  let shownRun = 0;
+  function renderProgress(run, idx) {
+    const R = RUNS[run], fresh = shownRun !== run;
+    const items = R.steps.map((label, i) => {
+      const done = i + 1 < idx || idx === 4, cur = i + 1 === idx || (idx === 4 && i === 2);
+      return `${i ? `<li class="step-line${i < idx ? " is-done" : ""}" aria-hidden="true"></li>` : ""}<li class="step${done ? " is-done" : ""}${cur ? " is-current" : ""}"${cur ? ' aria-current="step"' : ""}><span class="step-dot"><span>${i + 1}</span>${CHECK}</span><span class="step-label">${label}</span></li>`;
     }).join("");
-    $("#progress").innerHTML = `<div class="pg-count">Step ${n} of 4</div><ol>${items}</ol>`;
-    shownSteps = count;
+    $("#progress").innerHTML = `<div class="pg-count">${R.name} · Step ${Math.min(idx, 3)} of 3</div><ol>${items}</ol>`;
+    if (fresh) { $("#progress").classList.remove("reveal"); void $("#progress").offsetWidth; $("#progress").classList.add("reveal"); }
+    shownRun = run;
   }
-  function setStep(n) {
+  /* The application's own three steps move as its page changes. */
+  function setApplyStep(idx) { state.applyStep = idx; if (state.step === 1) renderProgress(1, idx); }
+  function setStep(n, opts) {
     state.step = n;
-    renderProgress(n);
+    if (!(opts && opts.hold)) { if (n === 1) renderProgress(1, state.applyStep || 1); else renderProgress(2, n === 4 ? 4 : n - 1); }
     $$(".note-step").forEach(ns => ns.classList.toggle("is-current", ns.dataset.step === String(n)));
   }
   function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 2200); }
@@ -438,6 +441,7 @@
   function changeEmail() {
     if (state.processing) return;
     clearInterval(state.resendTick);
+    setApplyStep(1);
     Object.assign(state, { identity: null, lookup: null, email: null, unlocked: false, verified: false, resumeConfirmed: false, formActive: false, filled: false, introCollapsed: false, resume: state.upload || null, resumeRow: null, startRow: null, otpMode: "send", answers: {}, a: { backup: null, locpref: null, relocate: null } });
     renderStep1(); renderCta1();
     agent("Sure, which email should I use?", { think: 250, status: "Start with your email" });
@@ -452,7 +456,7 @@
     $("#sec-phone").hidden = false;
     $("#sec-resume").hidden = false;
     renderSavedResume();
-    showForm(); $("#sec-summary").hidden = false; renderSummary();
+    showForm(); $("#sec-summary").hidden = false; renderSummary(); setApplyStep(2);
     $$("[data-fill-tag]").forEach(t => { t.textContent = "Saved from your last application"; });
     renderCta1();
     const P = D.saved.profile;
@@ -595,7 +599,7 @@
 
   function startByHand() {
     if (state.formActive) return;
-    state.formActive = true; state.filled = true; state.byHand = true;
+    state.formActive = true; state.filled = true; state.byHand = true; setApplyStep(2);
     showForm(); $("#sec-summary").hidden = true; $("#edit-fields").hidden = false; $("#edit-done-row").hidden = true;
     $("#edit-fields").after($("#sec-pref"));
     $$("[data-fill-tag]").forEach(t => { t.textContent = "Type your answers"; });
@@ -704,7 +708,7 @@
     renderSummary();
     if (late) {
       showForm(); $("#sec-summary").hidden = !$("#edit-fields").hidden || !!state.byHand;
-      collapseIntro(); workScroll.scrollTop = 0;
+      collapseIntro(); workScroll.scrollTop = 0; setApplyStep(2);
     } else $("#sec-pref").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
   }
 
@@ -779,7 +783,7 @@
       agent("One thing first: confirm the resume. It's the one answer I can't check for you.", { think: 250 });
       return;
     }
-    const btn = $("#submit1"); btn.dataset.busy = "1"; btn.disabled = true; btn.innerHTML = "Submitting…";
+    const btn = $("#submit1"); btn.dataset.busy = "1"; btn.disabled = true; btn.innerHTML = "Submitting…"; setApplyStep(3);
     state.email = ($("#f-email").value || "").trim() || C.email;
     state.phone = ($("#f-phone").value || "").trim() || C.phone;
     agent("Submitting to West Alamo Dental Care.", { think: 250 });
@@ -788,7 +792,7 @@
     state.sent = [D.firstJob];
     resetSelection();
     collapseThread("Apply · sent to West Alamo");
-    setStep(2); renderStep2(false, false, true); runStep2Chat();
+    renderProgress(1, 4); setStep(2, { hold: true }); renderStep2(false, false, true); runStep2Chat();
   }
   async function runChecklist(title, items) {
     setWork(`<div class="send-card"><h2>${esc(title)}</h2><ul class="steps">${items.map(t => `<li><span class="dot">${I.check}</span><span>${esc(t)}</span></li>`).join("")}</ul></div>`);
@@ -959,7 +963,7 @@
     /* First arrival after submitting: let the "Application sent" banner land on its own, then bring in the recommendations. */
     if (intro) {
       const cta = $("#cta"); if (cta) cta.classList.add("hold");
-      setTimeout(() => { const r = $("#s2-rest"); if (r) r.classList.remove("hold"); const c = $("#cta"); if (c) c.classList.remove("hold"); }, reduce ? 300 : SENT_HOLD_MS);
+      setTimeout(() => { renderProgress(2, 1); const r = $("#s2-rest"); if (r) r.classList.remove("hold"); const c = $("#cta"); if (c) c.classList.remove("hold"); }, reduce ? 300 : SENT_HOLD_MS);
     }
     if (rerender) workScroll.scrollTop = Math.min(st, 180);
     $$("[data-bundle-toggle]").forEach(h => h.addEventListener("click", () => toggleBundle(h.dataset.bundleToggle, "form")));
