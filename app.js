@@ -861,9 +861,9 @@
     return out.slice(0, 3);
   }
   const MATCH_BANDS = [
-    { id: "m-strong", min: 85, name: "Strong matches · 85%+", why: "Role, location and pay all line up with your profile", dist: () => 0 },
-    { id: "m-good", min: 70, name: "Good matches · 70 to 84%", why: "A strong fit on most things, with one trade-off", dist: () => 2 },
-    { id: "m-possible", min: 0, name: "Possible matches · under 70%", why: "A partial fit, worth a look if you're flexible", dist: () => 3 },
+    { id: "m-strong", min: 85, name: "Strong matches · 85%+", why: "Our AI matched your resume and preferences against each job, and these score highest", dist: () => 0 },
+    { id: "m-good", min: 70, name: "Good matches · 70 to 84%", why: "Our AI scores these as a strong fit overall, with a trade-off or two", dist: () => 2 },
+    { id: "m-possible", min: 0, name: "Possible matches · under 70%", why: "Our AI scores these as a partial fit, worth a look if you're flexible", dist: () => 3 },
   ];
   function matchBands() {
     const out = MATCH_BANDS.map(b => ({ ...b, label: b.name, changes: [], jobs: [] }));
