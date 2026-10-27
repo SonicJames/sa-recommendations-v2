@@ -35,7 +35,7 @@
 
   const state = {
     step: 1, opened: false,
-    identity: null, lookup: null, unlocked: false, resumeConfirmed: false, processing: false, otpMode: "send", resumeRow: null,
+    identity: "new", lookup: null, unlocked: false, unlockOffered: false, resumeConfirmed: false, processing: false, otpMode: "send", resumeRow: null,
     status: { text: "CareerGPT", busy: false },
     resume: null, formActive: false, filled: false,
     a: { backup: null, locpref: null, relocate: null },
@@ -218,6 +218,8 @@
   const LOC = [{ value: "San Antonio", label: "San Antonio" }, { value: "Austin", label: "Austin" }, { value: "Dallas", label: "Dallas" }, { value: "Houston", label: "Houston" }];
   const EEO = ["Prefer not to say"];
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  /* The sample resume lists a work address that has no saved account. Typing the saved address instead starts the returning flow. */
+  const RESUME_EMAIL = "daniel.okafor.dds@gmail.com";
   const isKnownEmail = e => e.trim().toLowerCase() === D.saved.email.toLowerCase();
   const sel = (id, opts, value, why, placeholder) => `<div class="f" id="${id}-w"><label for="${id}">${placeholder}${why ? ` <span class="need">Required</span><span class="ok">${I.check}</span>` : ""}</label><select id="${id}">${value === "" ? `<option value="">Choose</option>` : ""}${opts.map(o => `<option${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>${why ? `<div class="hint">${esc(why)}</div>` : ""}</div>`;
   const field = (id, label, why, ph = "") => `<div class="f" id="${id}-w"><label for="${id}">${label} <span class="need">Required</span><span class="ok">${I.check}</span></label><input id="${id}" value="" placeholder="${esc(ph)}"><div class="hint">${esc(why)}</div></div>`;
@@ -225,11 +227,10 @@
   /* v2: nothing of the form shows until it has something to say. After the resume, the answers it covered collapse into a
      summary at the bottom (Edit opens the full form); the questions only the candidate can answer sit above it. */
   const val = id => (($("#" + id) && $("#" + id).value) || "").trim();
-  function showForm() { $("#form-rest").hidden = false; $("#consent").hidden = false; }
+  function showForm() { $("#sec-contact").hidden = false; $("#form-rest").hidden = false; $("#consent").hidden = false; }
   /* After a new candidate's upload completes, the email, phone and resume steps fold away: the page is just the summary and the remaining questions. Edit brings the phone back. */
-  function collapseIntro() { state.introCollapsed = true; ["sec-email", "sec-phone", "sec-unlock", "sec-resume"].forEach(id => { $("#" + id).hidden = true; }); if (!phoneOk()) $("#sec-phone").hidden = false; markPhone(); }
+  function collapseIntro() { state.introCollapsed = true; ["sec-resume"].forEach(id => { $("#" + id).hidden = true; }); markPhone(); markEmail(); }
   function setEditing(on) {
-    if (state.introCollapsed) $("#sec-phone").hidden = !on && phoneOk();
     $("#edit-fields").hidden = !on;
     $("#sec-summary").hidden = on || state.byHand;
     $("#edit-done-row").hidden = !!state.byHand;
@@ -238,8 +239,8 @@
   function ensureVisible(el) { if (el && el.closest("#edit-fields") && $("#edit-fields").hidden) setEditing(true); }
   function renderSummary() {
     const rows = [];
-    const contact = [[val("f-first"), val("f-last")].filter(Boolean).join(" "), val("f-email"), val("f-phone")].filter(Boolean).join(" · ");
-    if (contact) rows.push(["Contact", contact]);
+    const contact = [val("f-first"), val("f-last")].filter(Boolean).join(" ");
+    if (contact) rows.push(["Name", contact]);
     const addr = [val("f-street"), val("f-city"), [val("f-state"), val("f-zip")].filter(Boolean).join(" ")].filter(Boolean).join(", ");
     if (addr) rows.push(["Address", addr]);
     const bg = [val("f-title"), val("f-school"), val("f-grad") && "Class of " + val("f-grad")].filter(Boolean).join(" · ");
@@ -252,29 +253,9 @@
   function renderStep1() {
     setWork(`
       <h1>Your application</h1>
-      <p class="lede">Start with your email. Returning? Your saved details load in one step. New? Upload a resume and the form fills itself. <b>About 2 minutes.</b></p>
+      <p class="lede">Start with your resume and the form fills itself. You only check the answers that need you. <b>About 2 minutes.</b></p>
 
-      <section class="sec" id="sec-email">
-        <div class="sec-h"><div class="sec-title">Email</div><span class="tag accent" id="email-tag">Start here</span></div>
-        <div id="email-box">
-          <div class="f" id="f-start-w"><label for="f-start">Email</label>
-            <div class="email-in"><input id="f-start" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"><span class="lookup" id="lookup"></span></div>
-            <div class="hint">${esc(W.email)}</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="sec" id="sec-phone" hidden>
-        <div class="sec-h"><div class="sec-title">Phone number</div><span class="tag accent" id="phone-tag">Required</span></div>
-        <div class="f" id="f-phone-w"><input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" value="" placeholder="(555) 123-4567" aria-label="Phone number"><div class="hint">${esc(W.phone)}</div></div>
-      </section>
-
-      <section class="sec" id="sec-unlock" hidden>
-        <div class="sec-h"><div class="sec-title">${I.shield} Unlock your saved details</div><span class="tag accent" id="unlock-tag">Required</span></div>
-        <div id="unlock-box"></div>
-      </section>
-
-      <section class="sec" id="sec-resume" hidden>
+      <section class="sec" id="sec-resume">
         <div class="sec-h"><div class="sec-title">Resume</div><span class="tag accent" id="resume-tag">Required</span></div>
         <div id="resume-box">
           <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload your resume">
@@ -284,6 +265,19 @@
           </div>
           <div class="hint">${esc(W.resume)}</div>
         </div>
+      </section>
+
+      <section class="sec" id="sec-contact" hidden>
+        <div class="sec-h"><div class="sec-title">Your contact details</div><span class="tag" data-fill-tag>From your resume</span></div>
+        <div class="grid2">
+          ${field("f-email", "Email", W.email, "you@example.com")}
+          <div class="f" id="f-phone-w"><label for="f-phone">Phone number <span class="need">Required</span><span class="ok">${I.check}</span></label><input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" value="" placeholder="(555) 123-4567"><div class="hint">${esc(W.phone)}</div></div>
+        </div>
+      </section>
+
+      <section class="sec" id="sec-unlock" hidden>
+        <div class="sec-h"><div class="sec-title">${I.shield} Welcome back: unlock your saved answers</div><span class="tag accent" id="unlock-tag">Required</span></div>
+        <div id="unlock-box"></div>
       </section>
 
       <section class="sec" id="sec-summary" hidden>
@@ -302,7 +296,6 @@
         <div class="grid2">
           ${field("f-first", "First name", W.first, "Jane")}
           ${field("f-last", "Last name", W.last, "Doe")}
-          ${field("f-email", "Email", W.email, "you@example.com")}
         </div>
       </section>
 
@@ -359,7 +352,6 @@
       <p class="consent" id="consent" hidden>By submitting, you agree to an AI agent submitting this application on West Alamo Dental Care's careers site, and to the <a href="#" data-toast="Terms of service (prototype)">terms of service</a> and <a href="#" data-toast="Privacy policy (prototype)">privacy policy</a>.</p>
     `);
     renderCta1();
-    bindEmailStart();
     const drop = $("#drop");
     drop.addEventListener("click", openFilePicker);
     drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openFilePicker(); } });
@@ -373,126 +365,16 @@
     $("#f-backup").addEventListener("input", checkBackup);
     $("#f-phone").addEventListener("blur", () => { $("#f-phone-w").dataset.touched = "1"; markPhone(); });
     $("#f-phone").addEventListener("input", () => { markPhone(); renderSummary(); syncSubmit(); updateProgress(); });
-    $("#f-email").addEventListener("input", checkBackup);
+    $("#f-email").addEventListener("blur", () => { $("#f-email-w").dataset.touched = "1"; markEmail(); });
+    $("#f-email").addEventListener("input", () => { checkBackup(); markEmail(); renderSummary(); syncSubmit(); updateProgress(); onEmailInput(); });
     $("#f-backup").addEventListener("change", e => { if (e.target.value.trim() && checkBackup()) setAnswer("backup", e.target.value.trim(), "form"); });
     $$("#form-rest input, #form-rest select").forEach(el => el.addEventListener("input", updateProgress));
     $("#eeo-edit").addEventListener("click", openEeo);
     $("#sum-edit").addEventListener("click", () => setEditing(true));
     $("#edit-done").addEventListener("click", () => { setEditing(false); $("#sec-summary").scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" }); });
     bindToasts();
-    setTimeout(() => { const i = $("#f-start"); if (i && !state.identity) i.focus(); }, 350);
   }
 
-  /* Email lookup as they type: a short check, then "Welcome back" or "New here" inside the field. */
-  function bindEmailStart() {
-    const inp = $("#f-start"), look = $("#lookup");
-    let t = null;
-    const check = () => {
-      const v = inp.value.trim();
-      clearTimeout(t); state.lookup = null; renderCta1();
-      if (!EMAIL_RE.test(v)) { look.innerHTML = ""; return; }
-      look.innerHTML = `<span class="think"><span class="tdot"></span></span>`;
-      setStatus("Checking…", true);
-      t = setTimeout(() => {
-        state.lookup = isKnownEmail(v) ? "returning" : "new";
-        look.innerHTML = state.lookup === "returning" ? `<span class="tag dark">Welcome back</span>` : `<span class="tag">New here</span>`;
-        setStatus(state.lookup === "returning" ? "Welcome back" : "New here");
-        renderCta1();
-      }, reduce ? 10 : 700);
-    };
-    inp.addEventListener("input", check);
-    inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); if (state.lookup) startWithEmail(); } });
-  }
-
-  async function startWithEmail() {
-    const inp = $("#f-start"); if (!inp) return;
-    const v = inp.value.trim();
-    if (!EMAIL_RE.test(v) || state.identity) return;
-    state.identity = state.lookup || (isKnownEmail(v) ? "returning" : "new");
-    state.email = v;
-    $("#f-email").value = v; $("#f-email-w").classList.add("done");
-    $("#email-box").innerHTML = `<div class="resume"><div class="ic">${I.mail}</div><div><div class="nm">${esc(v)}</div><div class="sub">${state.identity === "returning" ? "Welcome back, your saved details are ready to unlock" : "New here"}</div></div><button class="btn-text act" type="button" id="email-change">Change</button></div>`;
-    $("#email-tag").textContent = "Done"; $("#email-tag").classList.remove("accent");
-    $("#email-change").addEventListener("click", changeEmail);
-    user(v);
-    $("#sec-phone").hidden = state.identity === "returning";
-    if (state.identity === "new" && state.upload) {
-      /* Email changed after an upload: keep the resume and refill the form from it instead of asking again. */
-      $("#sec-resume").hidden = false; state.formActive = true;
-      await fillFromResume();
-      await agent(`Same resume, new email. I kept ${state.upload} and refilled the form from it.`, { think: 400, status: "Resume kept" });
-      return;
-    }
-    if (state.identity === "new") {
-      $("#sec-resume").hidden = false;
-      renderCta1();
-      const row = chipRow([{ value: "upload", label: "Upload resume" }, { value: "hand", label: "I'll fill it in by hand" }], o => o.value === "upload" ? openFilePicker() : startByHand());
-      state.startRow = row;
-      await agent("New here, welcome. Upload your resume and I'll fill most of this form from it. You only check the answers that need you.", { think: 700, thinkLabel: "Looking you up…", chips: row, status: "Upload your resume" });
-      return;
-    }
-    state.otpMode = "unlock"; state.otpChannel = "sms";
-    state.maskedPhone = maskPhone(D.saved.profile.phone); state.maskedEmail = maskEmail(v);
-    $("#sec-unlock").hidden = false;
-    $("#unlock-box").innerHTML = otpHtml();
-    bindOtp(onUnlocked);
-    renderCta1();
-    await agent(`Welcome back. You've applied with me before, so I texted a code to ${state.maskedPhone}. Enter it and I'll load your resume and the ${D.saved.answerCount} answers from your last application.`, { think: 900, thinkLabel: "Looking you up…", meta: "Found your saved details in 1s", status: "Enter the code we texted" });
-    const first = $("#otp input"); if (first) first.focus();
-  }
-  function changeEmail() {
-    if (state.processing) return;
-    clearInterval(state.resendTick);
-    setApplyStep(1);
-    Object.assign(state, { identity: null, lookup: null, email: null, unlocked: false, verified: false, resumeConfirmed: false, formActive: false, filled: false, introCollapsed: false, resume: state.upload || null, resumeRow: null, startRow: null, otpMode: "send", answers: {}, a: { backup: null, locpref: null, relocate: null } });
-    renderStep1(); renderCta1();
-    agent("Sure, which email should I use?", { think: 250, status: "Start with your email" });
-  }
-
-  /* Returning candidate, after the code: everything loads, the resume asks to be checked. */
-  async function onUnlocked() {
-    state.verified = true; state.unlocked = true; state.formActive = true; state.filled = true;
-    Object.assign(state.answers, D.saved.answers);
-    const es = $("#email-box .sub"); if (es) es.textContent = "Welcome back";
-    $("#sec-unlock").innerHTML = `<div class="sec-h"><div class="sec-title">${I.shield} Verified by text</div><span class="tag">Done</span></div><p class="hint" style="font-size:14px;color:var(--t2);margin:0">That's the only code you'll enter. It also covers sending the applications at the end.</p>`;
-    $("#sec-phone").hidden = false;
-    $("#sec-resume").hidden = false;
-    renderSavedResume();
-    showForm(); $("#sec-summary").hidden = false; renderSummary(); setApplyStep(2);
-    $$("[data-fill-tag]").forEach(t => { t.textContent = "Saved from your last application"; });
-    renderCta1();
-    const P = D.saved.profile;
-    const seq = [["f-first", P.first], ["f-last", P.last], ["f-phone", P.phone], ["f-backup", P.backupEmail], ["f-street", P.street], ["f-city", P.city], ["f-state", P.state], ["f-zip", P.zip], ["f-title", P.title], ["f-school", P.school], ["f-grad", P.gradYear], ["f-locpref", P.locpref]];
-    const fillAll = (async () => {
-      for (const [id, v] of seq) {
-        const el = $("#" + id); el.value = v;
-        el.closest(".f").classList.add("done");
-        renderSummary(); updateProgress();
-        await wait(70);
-      }
-      state.a.backup = P.backupEmail; state.a.relocate = P.relocate;
-      $$("#f-relocate button").forEach(b => b.classList.toggle("on", b.dataset.v === P.relocate));
-      $("#f-relocate-w").classList.add("done");
-      /* A saved answer whose context changed is re-checked in the form itself (the chat asks the same thing on desktop). */
-      const lw = $("#f-locpref-w"); lw.classList.remove("done"); lw.classList.add("needs");
-      lw.querySelector(".hint").innerHTML = `Last time you chose <b>${esc(P.locpref)}</b>. This job's in San Antonio.<div class="chips mini"><button type="button" class="chip" data-loc="San Antonio">Switch to San Antonio</button><button type="button" class="chip" data-loc="${esc(P.locpref)}">Keep ${esc(P.locpref)}</button></div>`;
-      $$("#f-locpref-w [data-loc]").forEach(b => b.addEventListener("click", () => setAnswer("locpref", b.dataset.loc, "form")));
-      updateProgress();
-    })();
-    const card = document.createElement("div"); card.className = "mcard";
-    card.innerHTML = `<ul>
-      <li>${I.check}<span><b>Resume</b> from ${esc(fmtDate(D.saved.resume.uploaded))}, your application to ${esc(D.saved.resume.from)}</span></li>
-      <li>${I.check}<span><b>Contact, address and background</b></span></li>
-      <li>${I.check}<span><b>Preferences</b> ${esc(P.locpref)} first, open to relocating</span></li>
-      <li>${I.check}<span><b>Answer bank</b> Texas license, start date, years of experience</span></li>
-    </ul>`;
-    await agent(`Loaded: your resume from ${fmtDate(D.saved.resume.uploaded)} and ${D.saved.answerCount} answers from your last application.`, { until: fillAll, thinkLabel: "Loading your saved details…", meta: "Loaded your saved details in 1s", card, status: `${D.saved.answerCount} of 19 loaded` });
-    const row = chipRow([{ value: "use", label: "Use it" }, { value: "preview", label: "Preview first" }, { value: "replace", label: "Replace" }], o => { if (o.value === "use") confirmResume("chat"); else if (o.value === "preview") openPreview(); else openFilePicker(); });
-    state.resumeRow = row;
-    await agent(`One thing I can't check for you: is that resume still current? It's ${ageText(daysSince(D.saved.resume.uploaded))} old.`, { think: 400, chips: row, status: "Check your resume" });
-    const loc = await ask("locpref", `Last time your first location was ${P.locpref}. This job's in San Antonio. Switch, or keep ${P.locpref}?`, [{ value: "San Antonio", label: "San Antonio" }, { value: P.locpref, label: `Keep ${P.locpref}` }], { onPick: o => setAnswer("locpref", o.value, "chat"), think: 400, status: state.resumeConfirmed ? "Confirm your location" : "Check your resume" });
-    await agent(state.resumeConfirmed ? "Everything's ready. Submit when it looks right to you." : "Everything else is ready. Confirm the resume and submit.", { think: 400, status: state.resumeConfirmed ? "Ready to submit" : "Confirm your resume" });
-  }
   function renderSavedResume() {
     const R = D.saved.resume, age = daysSince(R.uploaded), stale = age > 90;
     const tag = $("#resume-tag"); tag.textContent = "Still current?"; tag.classList.add("accent");
@@ -566,12 +448,6 @@
   const ageText = d => d < 1 ? "today" : d === 1 ? "1 day" : d < 60 ? `${d} days` : `${Math.round(d / 30)} months`;
 
   function renderCta1() {
-    if (!state.identity) {
-      setCta(`<div class="cta-in"><div class="cta-meta"><span>Your email first. Everything else follows from it.</span></div>
-        <div class="cta-actions"><button class="btn btn-primary" type="button" id="email-go"${state.lookup ? "" : " disabled"}>Continue ${I.arrow}</button></div></div>`);
-      $("#email-go").addEventListener("click", startWithEmail);
-      return;
-    }
     if (state.identity === "returning" && !state.unlocked) {
       setCta(`<div class="cta-in"><div class="cta-meta"><span>Enter the code to load your saved details</span></div><div class="cta-actions"><button class="btn btn-primary" type="button" disabled>${I.shield} Unlock</button></div></div>`);
       return;
@@ -597,7 +473,7 @@
 
   /* Prototype: no file dialog. Choosing "upload" behaves as if the sample resume was picked, then pre-populates the form. */
   function openFilePicker() { onResume(C.resume); }
-  $("#plus").addEventListener("click", () => { if (state.step === 1 && state.identity && !state.resume) openFilePicker(); else toast("Attachments (prototype)"); });
+  $("#plus").addEventListener("click", () => { if (state.step === 1 && !state.resume) openFilePicker(); else toast("Attachments (prototype)"); });
 
   function startByHand() {
     if (state.formActive) return;
@@ -614,10 +490,10 @@
   }
 
   function updateProgress() {
-    markPhone();
+    markPhone(); markEmail();
     if (!state.filled) return;
     const fields = $$("#form-rest input, #form-rest select");
-    let n = fields.filter(f => f.value && f.value.trim()).length + (state.a.relocate ? 1 : 0) + (state.resume ? 1 : 0) + (val("f-phone") ? 1 : 0);
+    let n = fields.filter(f => f.value && f.value.trim()).length + (state.a.relocate ? 1 : 0) + (state.resume ? 1 : 0) + (val("f-phone") ? 1 : 0) + (val("f-email") ? 1 : 0);
     const an = $("#ans-n"); if (an) an.textContent = n;
     const bar = $("#bar-i"); if (bar) bar.style.width = Math.min(100, n / 19 * 100) + "%";
     const left = ["backup", "locpref", "relocate"].filter(k => !state.a[k]).length;
@@ -633,6 +509,44 @@
   const PHONE_ERR = "Enter the full 10-digit number, including area code.";
   function markPhone() { const w = $("#f-phone-w"); if (!w) return; const bad = !phoneOk() && !!val("f-phone"), show = bad && (!!w.dataset.touched || state.introCollapsed); w.classList.toggle("done", phoneOk()); w.classList.toggle("needs", bad); w.classList.toggle("invalid", show);
     let err = $("#f-phone-err"); if (!err) { err = document.createElement("div"); err.id = "f-phone-err"; err.className = "err"; err.setAttribute("role", "alert"); err.textContent = PHONE_ERR; w.appendChild(err); } err.hidden = !show; const t = $("#phone-tag"); if (t) { t.textContent = phoneOk() ? "Done" : "Required"; t.classList.toggle("accent", !phoneOk()); } }
+
+  /* Email: a valid address. The resume prefills it; editing it to an address with saved details offers the text-code unlock. */
+  const EMAIL_ERR = "Enter a valid email address, like name@example.com.";
+  const emailOk = () => EMAIL_RE.test(val("f-email"));
+  function markEmail() { const w = $("#f-email-w"); if (!w) return; const bad = !!val("f-email") && !emailOk(), show = bad && (!!w.dataset.touched || state.introCollapsed); w.classList.toggle("done", emailOk()); w.classList.toggle("needs", bad); w.classList.toggle("invalid", show);
+    let err = $("#f-email-err"); if (!err) { err = document.createElement("div"); err.id = "f-email-err"; err.className = "err"; err.setAttribute("role", "alert"); err.textContent = EMAIL_ERR; w.appendChild(err); } err.hidden = !show; }
+  function onEmailInput() {
+    if (state.unlocked) return;
+    const v = val("f-email");
+    if (emailOk() && isKnownEmail(v)) { if (!state.unlockOffered) offerUnlock(v); }
+    else if (state.unlockOffered) { state.unlockOffered = false; clearInterval(state.resendTick); $("#sec-unlock").hidden = true; syncSubmit(); }
+  }
+  async function offerUnlock(v) {
+    state.unlockOffered = true; state.otpMode = "unlock"; state.otpChannel = "sms";
+    state.maskedPhone = maskPhone(D.saved.profile.phone); state.maskedEmail = maskEmail(v);
+    $("#sec-unlock").hidden = false;
+    $("#unlock-box").innerHTML = otpHtml();
+    bindOtp(onSavedUnlocked);
+    syncSubmit();
+    await agent(`That email has saved details from before. I texted a code to ${state.maskedPhone}. Enter it and I'll load the ${D.saved.answerCount} answers from your last application.`, { think: 700, thinkLabel: "Looking you up…", meta: "Found your saved details in 1s", status: "Enter the code" });
+  }
+  /* After the code: the saved answers load on top of the resume that was just read. */
+  async function onSavedUnlocked() {
+    state.identity = "returning"; state.verified = true; state.unlocked = true; state.resumeConfirmed = true;
+    Object.assign(state.answers, D.saved.answers);
+    $("#sec-unlock").innerHTML = `<div class="sec-h"><div class="sec-title">${I.shield} Verified by text</div><span class="tag">Done</span></div><p class="hint" style="font-size:14px;color:var(--t2);margin:0">That's the only code you'll enter. It also covers sending the applications at the end.</p>`;
+    const P = D.saved.profile;
+    [["f-backup", P.backupEmail], ["f-phone", P.phone]].forEach(([id, v]) => { const el = $("#" + id); el.value = v; el.closest(".f").classList.add("done"); });
+    state.a.backup = P.backupEmail; state.a.relocate = P.relocate;
+    $$("#f-relocate button").forEach(b => b.classList.toggle("on", b.dataset.v === P.relocate));
+    $("#f-relocate-w").classList.add("done");
+    $("#pref-tag").classList.remove("accent");
+    const lw = $("#f-locpref-w"); lw.classList.remove("done"); lw.classList.add("needs");
+    lw.querySelector(".hint").innerHTML = `Last time you chose <b>${esc(P.locpref)}</b>. This job's in San Antonio.<div class="chips mini"><button type="button" class="chip" data-loc="San Antonio">Switch to San Antonio</button><button type="button" class="chip" data-loc="${esc(P.locpref)}">Keep ${esc(P.locpref)}</button></div>`;
+    $$("#f-locpref-w [data-loc]").forEach(b => b.addEventListener("click", () => setAnswer("locpref", b.dataset.loc, "form")));
+    markPhone(); updateProgress(); syncSubmit(); renderCta1();
+    await agent(`Loaded ${D.saved.answerCount} answers from your last application. Last time your first location was ${P.locpref}, so please check that one before you submit.`, { think: 500, status: "Check your location" });
+  }
 
   /* Backup email must be a valid address and differ from the main email (case-insensitive). */
   const BACKUP_ERR = "Backup email must be different from your main email.";
@@ -697,7 +611,7 @@
     state.filled = true;
     if (state.identity === "returning") state.resumeConfirmed = true;
     renderCta1();
-    const seq = [["f-first", C.first], ["f-last", C.last], ["f-email", $("#f-email").value || C.email], ["f-phone", val("f-phone") || C.phone], ["f-street", C.street], ["f-city", C.city], ["f-state", C.state], ["f-zip", C.zip], ["f-title", C.title], ["f-school", C.school], ["f-grad", C.gradYear]];
+    const seq = [["f-first", C.first], ["f-last", C.last], ["f-email", val("f-email") || RESUME_EMAIL], ["f-phone", val("f-phone") || C.phone], ["f-street", C.street], ["f-city", C.city], ["f-state", C.state], ["f-zip", C.zip], ["f-title", C.title], ["f-school", C.school], ["f-grad", C.gradYear]];
     for (const [id, v] of seq) {
       const el = $("#" + id); el.value = v;
       el.closest(".f").classList.add("done");
@@ -746,7 +660,9 @@
   }
 
   async function runStep1Chat() {
-    await agent("Hi, I'm CareerGPT. I fill job applications so you don't have to. Start with your email: if you've applied with me before, your resume and answers load in one step. If not, I'll read your resume and fill the form from it.", { think: 700, status: "Start with your email" });
+    const row = chipRow([{ value: "upload", label: "Upload resume" }, { value: "hand", label: "I'll fill it in by hand" }], o => o.value === "upload" ? openFilePicker() : startByHand());
+    state.startRow = row;
+    await agent("Hi, I'm CareerGPT. I fill job applications so you don't have to. Start with your resume: I'll read it and fill the form from it, including your email and phone, which you can change. You only check the answers that need you.", { think: 700, chips: row, status: "Upload your resume" });
   }
   /* The form (drop zone, sample link, CTA) can answer the chat's first question too: mark the matching chip. */
   function markStart(value) { const row = state.startRow; if (!row) return; const b = row.querySelector(`.chip[data-value="${value}"]`); if (b) markChip(row, b); }
@@ -762,7 +678,8 @@
   /* The Submit button stays greyed out until every answer is in, the backup email differs from the main one, and (returning) the resume is confirmed. */
   function formComplete() {
     if (!REQUIRED1.every(id => { const el = $("#" + id); return el && (el.value || "").trim(); })) return false;
-    if (!state.a.relocate || backupBad($("#f-backup").value) || !phoneOk()) return false;
+    if (!state.a.relocate || backupBad($("#f-backup").value) || !phoneOk() || !emailOk()) return false;
+    if (state.unlockOffered && !state.unlocked) return false;
     return !(state.identity === "returning" && !state.resumeConfirmed);
   }
   function syncSubmit() {
