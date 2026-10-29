@@ -816,11 +816,9 @@ h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.
 @media (max-width: 920px) { .progress .step-line { width: 10px; } .progress ol { gap: 6px; } }
 
 /* Code screen pop-up */
-.auth-modal { position: fixed; inset: 0; z-index: 300; background: var(--paper); overflow-y: auto; display: flex; justify-content: center; animation: fade .25s ease both; }
+.auth-modal { position: fixed; inset: var(--top-h) 0 0 0; z-index: 300; background: var(--paper); overflow-y: auto; display: flex; justify-content: center; animation: fade .25s ease both; }
 .auth-card { width: min(640px, 100%); padding: 20px 20px 40px; }
-.auth-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--hair2); margin-bottom: 36px; }
-.auth-logo { display: flex; align-items: center; gap: 8px; font-size: 20px; letter-spacing: -.01em; }
-.auth-logo img { width: 30px; height: 30px; }
+.auth-top { display: flex; align-items: flex-start; justify-content: flex-end; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--hair2); margin-bottom: 36px; }
 .auth-acct { display: grid; justify-items: end; gap: 6px; font-size: 14px; text-align: right; min-width: 0; }
 .auth-acct span { overflow-wrap: anywhere; }
 .auth-acct .btn-text { color: var(--accent); text-decoration: none; font-size: 14px; }

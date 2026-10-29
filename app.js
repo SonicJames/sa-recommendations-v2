@@ -532,7 +532,7 @@
     const m = document.createElement("div");
     m.id = "auth-modal"; m.className = "auth-modal"; m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true"); m.setAttribute("aria-labelledby", "auth-title");
     m.innerHTML = `<div class="auth-card">
-      <div class="auth-top"><div class="auth-logo"><img src="assets/sonicjobs-mark.svg" alt=""><b>SonicJobs</b></div><div class="auth-acct"><span>${esc(email)}</span><button type="button" class="btn-text" id="auth-logout">${esc(logout)}</button></div></div>
+      <div class="auth-top"><div class="auth-acct"><span>${esc(email)}</span><button type="button" class="btn-text" id="auth-logout">${esc(logout)}</button></div></div>
       <h2 id="auth-title">Confirm it's you</h2>
       ${otpHtml()}
     </div>`;
