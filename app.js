@@ -223,8 +223,8 @@
   const LOC = [{ value: "San Antonio", label: "San Antonio" }, { value: "Austin", label: "Austin" }, { value: "Dallas", label: "Dallas" }, { value: "Houston", label: "Houston" }];
   const EEO = ["Prefer not to say"];
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  /* The sample resume lists a work address that has no saved account. Typing the saved address instead starts the returning flow. */
-  const RESUME_EMAIL = "daniel.okafor.dds@gmail.com";
+  /* The sample resume is the returning user's own, so its email is the one with a saved account. Editing it to another address makes them a new user. */
+  const RESUME_EMAIL = D.saved.email;
   const isKnownEmail = e => e.trim().toLowerCase() === D.saved.email.toLowerCase();
   const sel = (id, opts, value, why, placeholder) => `<div class="f" id="${id}-w"><label for="${id}">${placeholder}${why ? ` <span class="need">Required</span><span class="ok">${I.check}</span>` : ""}</label><select id="${id}">${value === "" ? `<option value="">Choose</option>` : ""}${opts.map(o => `<option${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}</select>${why ? `<div class="hint">${esc(why)}</div>` : ""}</div>`;
   const field = (id, label, why, ph = "") => `<div class="f" id="${id}-w"><label for="${id}">${label} <span class="need">Required</span><span class="ok">${I.check}</span></label><input id="${id}" value="" placeholder="${esc(ph)}"><div class="hint">${esc(why)}</div></div>`;
@@ -663,6 +663,7 @@
     if (late) {
       showForm(); $("#sec-summary").hidden = !$("#edit-fields").hidden || !!state.byHand;
       collapseIntro(); workScroll.scrollTop = 0; setApplyStep(2);
+      onEmailInput();
     } else $("#sec-pref").scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
   }
 
