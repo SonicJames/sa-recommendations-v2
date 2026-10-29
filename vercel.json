@@ -9,5 +9,17 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/cookie",
+      "destination": "/?flow=cookie",
+      "permanent": false
+    },
+    {
+      "source": "/no-cookie",
+      "destination": "/?flow=no-cookie",
+      "permanent": false
+    }
   ]
 }

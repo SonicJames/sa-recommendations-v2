@@ -4,6 +4,12 @@
   const C = D.candidate;
   const W = D.why;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* Two entry points to the returning-user journey. ?flow=cookie: this device carries the "known device" cookie, so the code
+     screen pops up as soon as the application opens. Anything else clears the cookie: the user is recognised later, by the email. */
+  const COOKIE = "sj_known_device";
+  const setDeviceCookie = on => { document.cookie = on ? `${COOKIE}=1; path=/; max-age=31536000; SameSite=Lax` : `${COOKIE}=; path=/; max-age=0; SameSite=Lax`; };
+  const hasDeviceCookie = () => document.cookie.split("; ").some(c => c.indexOf(COOKIE + "=") === 0);
+  setDeviceCookie(new URLSearchParams(location.search).get("flow") === "cookie");
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -240,6 +246,7 @@
     const rows = [];
     const contact = [val("f-first"), val("f-last")].filter(Boolean).join(" ");
     if (contact) rows.push(["Name", contact]);
+    if (state.resume) rows.push(["Resume", state.resume + (state.resume === D.saved.resume.name && !state.upload ? ` · uploaded ${fmtDate(D.saved.resume.uploaded)}` : "")]);
     const addr = [val("f-street"), val("f-city"), [val("f-state"), val("f-zip")].filter(Boolean).join(" ")].filter(Boolean).join(", ");
     if (addr) rows.push(["Address", addr]);
     const bg = [val("f-title"), val("f-school"), val("f-grad") && "Class of " + val("f-grad")].filter(Boolean).join(" · ");
@@ -272,11 +279,6 @@
           ${field("f-email", "Email", W.email, "you@example.com")}
           <div class="f" id="f-phone-w"><label for="f-phone">Phone number <span class="need">Required</span><span class="ok">${I.check}</span></label><input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" value="" placeholder="(555) 123-4567"><div class="hint">${esc(W.phone)}</div></div>
         </div>
-      </section>
-
-      <section class="sec" id="sec-unlock" hidden>
-        <div class="sec-h"><div class="sec-title">${I.shield} Welcome back: unlock your saved answers</div><span class="tag accent" id="unlock-tag">Required</span></div>
-        <div id="unlock-box"></div>
       </section>
 
       <section class="sec" id="sec-summary" hidden>
@@ -518,24 +520,36 @@
     if (state.unlocked) return;
     const v = val("f-email");
     if (emailOk() && isKnownEmail(v)) { if (!state.unlockOffered) offerUnlock(v); }
-    else if (state.unlockOffered) { state.unlockOffered = false; clearInterval(state.resendTick); $("#sec-unlock").hidden = true; syncSubmit(); }
+    else if (state.unlockOffered) { state.unlockOffered = false; closeAuth(); syncSubmit(); }
   }
-  async function offerUnlock(v) {
-    state.unlockOffered = true; state.otpMode = "unlock"; state.otpChannel = "sms";
-    state.maskedPhone = maskPhone(D.saved.profile.phone); state.maskedEmail = maskEmail(v);
-    $("#sec-unlock").hidden = false;
-    $("#unlock-box").innerHTML = otpHtml();
-    bindOtp(onSavedUnlocked);
-    syncSubmit();
-    await agent(`That email has saved details from before. I texted a code to ${state.maskedPhone}. Enter it and I'll load the ${D.saved.answerCount} answers from your last application.`, { think: 700, thinkLabel: "Looking you up…", meta: "Found your saved details in 1s", status: "Enter the code" });
+  /* The pop-up code screen, shared by both entry points: a code by text to the registered phone, or by email instead. */
+  const maskIntl = p => "+1" + "******" + String(p).replace(/\D/g, "").slice(-4);
+  function closeAuth() { const m = $("#auth-modal"); if (m) m.remove(); clearInterval(state.resendTick); }
+  function showAuth({ email, logout, onVerified, onLogout }) {
+    closeAuth();
+    state.otpMode = "auth"; state.otpChannel = "sms"; state.verified = false;
+    state.maskedPhone = maskIntl(D.saved.profile.phone); state.maskedEmail = maskEmail(email);
+    const m = document.createElement("div");
+    m.id = "auth-modal"; m.className = "auth-modal"; m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true"); m.setAttribute("aria-labelledby", "auth-title");
+    m.innerHTML = `<div class="auth-card">
+      <div class="auth-top"><div class="auth-logo"><img src="assets/sonicjobs-mark.svg" alt=""><b>SonicJobs</b></div><div class="auth-acct"><span>${esc(email)}</span><button type="button" class="btn-text" id="auth-logout">${esc(logout)}</button></div></div>
+      <h2 id="auth-title">Confirm it's you</h2>
+      ${otpHtml()}
+    </div>`;
+    document.body.appendChild(m);
+    bindOtp(() => { closeAuth(); onVerified(); });
+    $("#auth-logout").addEventListener("click", () => { closeAuth(); onLogout(); });
+    const first = $("#otp input"); if (first) first.focus();
   }
-  /* After the code: the saved answers load on top of the resume that was just read. */
-  async function onSavedUnlocked() {
-    state.identity = "returning"; state.verified = true; state.unlocked = true; state.resumeConfirmed = true;
-    Object.assign(state.answers, D.saved.answers);
-    $("#sec-unlock").innerHTML = `<div class="sec-h"><div class="sec-title">${I.shield} Verified by text</div><span class="tag">Done</span></div><p class="hint" style="font-size:14px;color:var(--t2);margin:0">That's the only code you'll enter. It also covers sending the applications at the end.</p>`;
+  /* Everything saved from the last application lands on the questions page: the resume and answers pre-populated, the
+     questions the employer still asks underneath. */
+  function applySavedProfile(keepResume) {
     const P = D.saved.profile;
-    [["f-backup", P.backupEmail], ["f-phone", P.phone]].forEach(([id, v]) => { const el = $("#" + id); el.value = v; el.closest(".f").classList.add("done"); });
+    state.identity = "returning"; state.verified = true; state.unlocked = true; state.resumeConfirmed = true; state.formActive = true; state.filled = true;
+    Object.assign(state.answers, D.saved.answers);
+    if (!(keepResume && state.resume)) state.resume = D.saved.resume.name;
+    const seq = [["f-first", P.first], ["f-last", P.last], ["f-email", P.email], ["f-phone", P.phone], ["f-backup", P.backupEmail], ["f-street", P.street], ["f-city", P.city], ["f-state", P.state], ["f-zip", P.zip], ["f-title", P.title], ["f-school", P.school], ["f-grad", P.gradYear]];
+    seq.forEach(([id, v]) => { const el = $("#" + id); el.value = v; el.closest(".f").classList.add("done"); });
     state.a.backup = P.backupEmail; state.a.relocate = P.relocate;
     $$("#f-relocate button").forEach(b => b.classList.toggle("on", b.dataset.v === P.relocate));
     $("#f-relocate-w").classList.add("done");
@@ -543,8 +557,33 @@
     const lw = $("#f-locpref-w"); lw.classList.remove("done"); lw.classList.add("needs");
     lw.querySelector(".hint").innerHTML = `Last time you chose <b>${esc(P.locpref)}</b>. This job's in San Antonio.<div class="chips mini"><button type="button" class="chip" data-loc="San Antonio">Switch to San Antonio</button><button type="button" class="chip" data-loc="${esc(P.locpref)}">Keep ${esc(P.locpref)}</button></div>`;
     $$("#f-locpref-w [data-loc]").forEach(b => b.addEventListener("click", () => setAnswer("locpref", b.dataset.loc, "form")));
-    markPhone(); updateProgress(); syncSubmit(); renderCta1();
-    await agent(`Loaded ${D.saved.answerCount} answers from your last application. Last time your first location was ${P.locpref}, so please check that one before you submit.`, { think: 500, status: "Check your location" });
+    $$("[data-fill-tag]").forEach(t => { t.textContent = "Saved from your last application"; });
+    showForm(); collapseIntro(); $("#sec-summary").hidden = false; $("#edit-fields").hidden = true; $("#edit-done-row").hidden = false;
+    renderSummary(); markPhone(); markEmail(); updateProgress(); syncSubmit(); renderCta1(); setApplyStep(2);
+    workScroll.scrollTop = 0;
+  }
+  /* Entry 1: the device cookie is present, so the code screen opens with the application. */
+  function startCookieFlow() {
+    showAuth({
+      email: D.saved.email, logout: "Log Out",
+      onVerified: async () => {
+        applySavedProfile(false);
+        await agent(`Welcome back, ${D.saved.profile.first}. I've loaded your resume and ${D.saved.answerCount} answers from your last application. Check the questions under the summary, especially your first location, then submit.`, { think: 500, status: "Check your location" });
+      },
+      onLogout: () => { setDeviceCookie(false); runStep1Chat(); },
+    });
+  }
+  /* Entry 2: no cookie, but the email on the questions page belongs to a saved account. */
+  function offerUnlock(v) {
+    state.unlockOffered = true; syncSubmit();
+    showAuth({
+      email: v, logout: "Use a different email",
+      onVerified: async () => {
+        applySavedProfile(true);
+        await agent(`Loaded ${D.saved.answerCount} answers from your last application. Last time your first location was ${D.saved.profile.locpref}, so please check that one before you submit.`, { think: 500, status: "Check your location" });
+      },
+      onLogout: () => { state.unlockOffered = false; syncSubmit(); const e = $("#f-email"); e.focus(); e.select(); },
+    });
   }
 
   /* Backup email must be a valid address and differ from the main email (case-insensitive). */
@@ -947,13 +986,14 @@
   const otpDest = () => state.otpChannel === "sms" ? state.maskedPhone : state.maskedEmail;
   const otpCopy = () => {
     const via = state.otpChannel === "sms" ? `texted to <b>${esc(state.maskedPhone)}</b>` : `emailed to <b>${esc(state.maskedEmail)}</b>`;
+    if (state.otpMode === "auth") return `Enter the code we sent to <b>${esc(otpDest())}</b>`;
     if (state.otpMode === "unlock") return `Enter the 6-digit code we ${via}${state.otpChannel === "sms" ? ", the number on your saved profile" : ""}. It unlocks your resume and <b>${D.saved.answerCount} answers</b> from your last application, and it's the only code you'll enter.`;
     const n = selectedJobs().length;
     return `Enter the 6-digit code we ${via}. It confirms it's you before <b>${n} ${plural(n, "application")}</b> go out in your name.`;
   };
-  const otpSwitchLabel = () => state.otpChannel === "sms" ? "Get it by email instead" : "Get it by text instead";
-  const otpHtml = () => `<div class="otp-card${state.otpMode === "unlock" ? " bare" : ""}" id="otp-card">
-        ${state.otpMode === "unlock" ? "" : `<h2>${I.shield} Confirm it's you</h2>`}
+  const otpSwitchLabel = () => state.otpMode === "auth" ? (state.otpChannel === "sms" ? "Or get code via email" : "Or get code via SMS") : state.otpChannel === "sms" ? "Get it by email instead" : "Get it by text instead";
+  const otpHtml = () => `<div class="otp-card${state.otpMode !== "send" ? " bare" : ""}" id="otp-card">
+        ${state.otpMode !== "send" ? "" : `<h2>${I.shield} Confirm it's you</h2>`}
         <p id="otp-copy">${otpCopy()}</p>
         <div class="otp" id="otp">${[0, 1, 2, 3, 4, 5].map(i => `<input inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digit ${i + 1}"${i === 0 ? ' autocomplete="one-time-code"' : ""}>`).join("")}</div>
         <div class="otp-foot"><span id="resend">Resend code in <span id="resend-n">30</span>s</span><button class="btn-text" type="button" id="otp-switch">${otpSwitchLabel()}</button><span class="proto">Prototype: any 6 digits work</span></div>
@@ -1241,7 +1281,7 @@
   document.addEventListener("click", e => { const b = e.target.closest("[data-details]"); if (b) { e.stopPropagation(); e.preventDefault(); openDetails(b.dataset.details, b); } }, true);
   document.addEventListener("keydown", e => { if (e.key === "Escape") { $("#notes").classList.remove("open"); closeDetails(); } });
 
-  function openPanel() { const p = $("#panel"); if (!p.hidden) return; p.hidden = false; if (!state.opened) { state.opened = true; setStep(1); renderStep1(); runStep1Chat(); } }
+  function openPanel() { const p = $("#panel"); if (!p.hidden) return; p.hidden = false; if (!state.opened) { state.opened = true; setStep(1); renderStep1(); if (hasDeviceCookie()) startCookieFlow(); else runStep1Chat(); } }
   function closePanel() { $("#panel").hidden = true; }
   $$("[data-start]").forEach(b => b.addEventListener("click", openPanel));
   document.addEventListener("click", e => { const t = e.target.closest("[data-close]"); if (t) { e.preventDefault(); closePanel(); } });
