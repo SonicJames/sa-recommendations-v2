@@ -871,7 +871,7 @@
       </div>
       <div class="s2-rest${intro ? " hold" : ""}" id="s2-rest">
       <div class="pool-h"><h2>Keep going! We've found <b>${nMatches}</b> other close ${plural(nMatches, "match", "matches")} to the role you applied to!</h2></div>
-      <p class="cap-line">${I.autofill}<span>We'll use your resume and answers to complete as much of each application as we can, and only ask you the questions we don't have an answer to.</span></p>
+      <p class="cap-line">${I.autofill}<span>We’ll use your resume and answers to complete each application, only asking what we don’t already know.</span></p>
       ${near.map(bundleHtml).join("")}
       ${far.length ? `<button class="btn-text more-opts" type="button" id="more-opts">More options (${far.length}): ${far.slice(0, SHOW).map(b => b.label.split(",")[0]).filter((v, i, a) => a.indexOf(v) === i).join(", ")}</button>` : ""}
       </div>
