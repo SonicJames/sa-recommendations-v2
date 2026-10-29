@@ -9,12 +9,5 @@
         }
       ]
     }
-  ],
-  "redirects": [
-    {
-      "source": "/match",
-      "destination": "/?v=match",
-      "permanent": false
-    }
   ]
 }
